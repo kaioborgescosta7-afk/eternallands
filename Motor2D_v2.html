@@ -550,6 +550,10 @@
       if (statusEl) statusEl.textContent = "⌛ Esta oferta não está mais disponível.";
       return;
     }
+    if (window.Loja && window.Loja.jaAdquirido(sku)) {   /* compra única, seção 2 */
+      if (statusEl) statusEl.textContent = "✓ Você já possui este item.";
+      return;
+    }
     try {
       if (window.AppInventor && typeof window.AppInventor.setWebViewString === "function") {
         window.AppInventor.setWebViewString(sku);
@@ -590,7 +594,10 @@
                                badge:..., note:..., gems:"" },
                              { decorar: function(cartao){ ... } });
    · `decorar` roda toda vez que o Mural abre, com o .loja-card do produto
-     (para vitrines, textos extras, "✓ Adquirido" etc.).
+     (para vitrines, textos extras etc.).
+   · `compraUnica: function(){ return jaComprou; }` torna o produto de
+     compra única: quem já tem vê "✓ Já adquirido", o botão fica desativado
+     e a loja recusa o SKU mesmo se a compra for chamada por outro caminho.
    · Loja.aoAbrir(fn) roda fn() depois de cada abertura do Mural.
 
    NOVIDADE: troque Loja.NOVIDADE pelo SKU do produto mais novo para a
@@ -647,6 +654,7 @@
   function gravar(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
 
   var decoradores = {};   /* sku -> fn(cartao) */
+  var unicas = {};        /* sku -> fn() que diz se o jogador já comprou */
   var aoAbrir = [];
 
   function registrarProduto(produto, ganchos){
@@ -656,6 +664,23 @@
     var ja = lista.some(function(p){ return p.sku === produto.sku; });
     if (!ja) lista.unshift(produto);
     if (ganchos && typeof ganchos.decorar === "function") decoradores[produto.sku] = ganchos.decorar;
+    if (ganchos && typeof ganchos.compraUnica === "function") unicas[produto.sku] = ganchos.compraUnica;
+  }
+
+  /* ── compra única ── */
+  function jaAdquirido(sku){
+    var f = unicas[sku];
+    try { return !!(f && f()); } catch(e){ return false; }
+  }
+  function marcarJaAdquirido(sku){
+    var btn = document.getElementById("loja-btn-" + sku);
+    if (!btn || btn.dataset.jaAdquirido === "1") return;
+    btn.dataset.jaAdquirido = "1";
+    btn.textContent = "✓ Já adquirido";
+    btn.disabled = true;
+    btn.removeAttribute("onclick");
+    btn.onclick = null;
+    btn.style.cssText += ";background:#2a2a24;border:1px solid #8a8268;color:#e6dcc0;box-shadow:none;animation:none;cursor:default;filter:none;opacity:.92";
   }
 
   function depoisDeAbrir(){
@@ -665,6 +690,7 @@
       if (cartao) { try { decoradores[sku](cartao); } catch(e){ console.error("[loja] decorar " + sku, e); } }
     });
     aoAbrir.forEach(function(fn){ try { fn(); } catch(e){ console.error("[loja] aoAbrir", e); } });
+    Object.keys(unicas).forEach(function(sku){ if (jaAdquirido(sku)) marcarJaAdquirido(sku); });
     montarCronometros();
     novidadeVista();
   }
@@ -706,6 +732,7 @@
     function tique(){
       if (!document.getElementById("loja-frag-modal")) { clearInterval(cronoTimer); return; }
       cronos.forEach(function(c){
+        if (c.btn.dataset.jaAdquirido === "1" || c.btn.dataset.anjoAdquirido === "1") { c.el.remove(); return; }   /* comprou com a loja aberta */
         var ms = restante(c.sku);
         if (ms > 0) {
           c.el.innerHTML = "⏳ Oferta termina em <b>" + formatar(ms) + "</b>";
@@ -798,6 +825,8 @@
     fechar: function(){ return window.fecharLojaFragmentos(); },
     pintarNovidade: pintarNovidade,
     ofertaAtiva: ofertaAtiva,
+    jaAdquirido: jaAdquirido,
+    marcarJaAdquirido: marcarJaAdquirido,
     restante: restante
   };
 })();
@@ -1501,7 +1530,7 @@ window.ANJO_LIBERADO = true;  /* laboratório: botão ✧ sempre disponível (a 
      Item permanente. Fica gravado em dois lugares: no aparelho (localStorage)
      e no save (G.anjoDaGuarda), para atravessar reinstalação via nuvem. */
   function jogoPronto(){ return !!(window.G && G.hero && typeof G.hero.level === "number"); }
-  /* comprou de verdade (é isto que a loja usa para "✓ Adquirido") */
+  /* comprou de verdade (é isto que a loja usa para a compra única: "✓ Já adquirido") */
   function possui(){
     return ler(KEY_DONO) === "1" || !!(window.G && G.anjoDaGuarda);
   }
@@ -1574,7 +1603,7 @@ window.ANJO_LIBERADO = true;  /* laboratório: botão ✧ sempre disponível (a 
   var tentativasLoja = 0;
   function registrarNaLoja(){
     if (window.Loja && typeof window.Loja.registrarProduto === "function") {
-      window.Loja.registrarProduto(PRODUTO, { decorar: decorarCartao });
+      window.Loja.registrarProduto(PRODUTO, { decorar: decorarCartao, compraUnica: possui });
       return;
     }
     if (++tentativasLoja < 40) setTimeout(registrarNaLoja, 250);
@@ -1611,7 +1640,7 @@ window.ANJO_LIBERADO = true;  /* laboratório: botão ✧ sempre disponível (a 
     var btn = document.getElementById("loja-btn-" + SKU);
     if (!btn || !possui() || btn.dataset.anjoAdquirido === "1") return;
     btn.dataset.anjoAdquirido = "1";
-    btn.textContent = "✓ Adquirido";
+    btn.textContent = "✓ Já adquirido";
     btn.disabled = true;
     btn.removeAttribute("onclick");
     btn.onclick = null;

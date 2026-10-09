@@ -156,7 +156,7 @@
      Item permanente. Fica gravado em dois lugares: no aparelho (localStorage)
      e no save (G.anjoDaGuarda), para atravessar reinstalação via nuvem. */
   function jogoPronto(){ return !!(window.G && G.hero && typeof G.hero.level === "number"); }
-  /* comprou de verdade (é isto que a loja usa para "✓ Adquirido") */
+  /* comprou de verdade (é isto que a loja usa para a compra única: "✓ Já adquirido") */
   function possui(){
     return ler(KEY_DONO) === "1" || !!(window.G && G.anjoDaGuarda);
   }
@@ -229,7 +229,7 @@
   var tentativasLoja = 0;
   function registrarNaLoja(){
     if (window.Loja && typeof window.Loja.registrarProduto === "function") {
-      window.Loja.registrarProduto(PRODUTO, { decorar: decorarCartao });
+      window.Loja.registrarProduto(PRODUTO, { decorar: decorarCartao, compraUnica: possui });
       return;
     }
     if (++tentativasLoja < 40) setTimeout(registrarNaLoja, 250);
@@ -266,7 +266,7 @@
     var btn = document.getElementById("loja-btn-" + SKU);
     if (!btn || !possui() || btn.dataset.anjoAdquirido === "1") return;
     btn.dataset.anjoAdquirido = "1";
-    btn.textContent = "✓ Adquirido";
+    btn.textContent = "✓ Já adquirido";
     btn.disabled = true;
     btn.removeAttribute("onclick");
     btn.onclick = null;
