@@ -22,7 +22,7 @@
     titulo: "Um clarão nas masmorras",
     itens: [
       "✧ <b>Anjo da Guarda</b> chegou ao 🛒 Mural de Compras. Um guardião celestial que desce à masmorra num facho de luz e caminha ao seu lado, rasgando as trevas ao redor dele.",
-      "Invoque e dispense quando quiser pelo botão ✧ (ou tecla H) dentro das masmorras. A chegada e a partida têm feixe celestial, penas de luz e onda de choque no pouso.",
+      "Invoque e dispense quando quiser pelo botão ✧ dentro das masmorras. A chegada e a partida têm feixe celestial, penas de luz e onda de choque no pouso.",
       "É cosmético e permanente: não altera o combate e fica salvo na sua conta, inclusive no save da nuvem.",
       "✉️ Esta cartinha é nova: toda atualização do jogo passa a ser anunciada aqui, e o histórico fica guardado para você reler."
     ]
