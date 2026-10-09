@@ -2694,6 +2694,21 @@ const SIMON_LEVELS = [
     "#  c d  #",
     "#@ L    #",
     "####4#G##"
+  ]},
+
+  /* Difícil II — mesmo ritmo do Difícil, mapa próprio (criado para a D2 do
+     jogo não repetir a sala da D10). Uma espinha de pedra corta o centro de
+     cima a baixo, com só duas passagens laterais na linha 4. */
+  { name:"Difícil II", len:9, pace:600, accel:26, minPace:360, rows:[
+    "####1####",
+    "#       #",
+    "# a # b #",
+    "2   #   3",
+    "## ### ##",
+    "#       #",
+    "# c # d #",
+    "#@     L#",
+    "####4#G##"
   ]}
 ];
 
@@ -4089,16 +4104,22 @@ const LEVELS_T1 = [
 "#        #",
 "#        #",
 "#####G####"]},
+
+  /* ───── Fases acrescentadas do Motor2D (v53) ─────────────────────────────
+     ACRESCENTADAS, não substituídas: o LEVELS_T1 do jogo já tinha 8 fases,
+     mais do que o Motor2D em alguns tiers, e trocar o array inteiro
+     apagaria fases em uso. Elas entram a partir do índice 8.        */
+
   /* 1.4a Difícil · O Labirinto dos Pilares */
   {rows:[
 "##########",
 "#@   #   #",
 "# $$ # . #",
-"# ## # # #",
+"#    #   #",
 "# .  # $ #",
-"# #  # # #",
+"# #  #   #",
 "#   .    #",
-"####G#####"]},
+"###G######"]},
 
   /* 1.4b Difícil · A Encruzilhada Central */
   {rows:[
@@ -4122,8 +4143,7 @@ const LEVELS_T1 = [
 "# $  #  $ #",
 "#    @    #",
 "#         #",
-"#####G#####"]},
-
+"#####G#####"]}
 ];
 
 /* ── TIER 2 · Abismos + alavancas + pontes ──────────────────────────────
@@ -4297,6 +4317,76 @@ const LEVELS_T2 = [
 "#     L   #",
 "#   .#  . #",
 "##G########"]},
+
+
+  /* ── D6 · Catacumbas de Arkenfall (antessala entre F1 e F2) ──────
+     Criadas nesta sessao para a antessala; todas verificadas por busca
+     exaustiva (solucao otima + replay) e pela regra da mecanica
+     obrigatoria: a fase fica INSOLUVEL se as pontes nunca abrirem /
+     se o F virar parede.                                            */
+  /* D6.1 · "Duas Alas"
+     O abismo vertical corta as duas alas de cima: para passar de uma a
+     outra e preciso descer por uma ponte, cruzar o porao e subir pela
+     outra. As duas pontes sao obrigatorias e cada uma tem a sua alavanca.
+     Solucao otima: 63 passos / 19 empurroes. */
+  {tier2:true,
+   rows:[
+"#########",
+"##. AL ##",
+"G   A   #",
+"#$  A   #",
+"#ABAAABA#",
+"#L$ ##$ #",
+"#@    . #",
+"#########"]},
+  /* D6.2 · "Garganta em L"
+     O abismo desce a coluna 4 e vira para a direita na linha 5: dois
+     trechos, uma ponte em cada. A ordem das travessias e obrigatoria,
+     porque a alavanca da segunda ponte so se alcanca depois da primeira.
+     Solucao otima: 70 passos / 21 empurroes. */
+  {tier2:true,
+   rows:[
+"#########",
+"##.LA   #",
+"##.$A   #",
+"#  $BL  #",
+"## @A $ #",
+"#AAAAABA#",
+"#       #",
+"####G####"]},
+  /* D6.3 · "Bolsoes Gemeos"
+     Duas pontes afastadas na mesma faixa de abismo e um pilar partindo o
+     porao em dois: cada caixa tem de descer pela ponte do lado certo, e o
+     pilar impede corrigir depois. Solucao otima: 96 passos / 22 empurroes. */
+  {tier2:true,
+   rows:[
+"##########",
+"#  ## L  #",
+"#. @  $$L#",
+"#ABAAAABA#",
+"#$.    $ #",
+"# .##    #",
+"#####G####"]},
+  /* D6.4 · "Garganta"
+     Abismo vertical de parede a parede com uma ponte unica: tudo — operador
+     e as quatro caixas — passa pelo mesmo ladrilho, uma coisa de cada vez.
+     Solucao otima: 88 passos / 28 empurroes. */
+  {tier2:true,
+   rows:[
+"########",
+"#.LA   #",
+"# $A $ #",
+"#  B$ $#",
+"#. A   #",
+"#. A   G",
+"##@A   #",
+"########"]},
+
+  /* ───── Fases acrescentadas do Motor2D (v53) ─────────────────────────────
+     ACRESCENTADAS, não substituídas: o LEVELS_T2 do jogo já tinha 16 fases,
+     mais do que o Motor2D em alguns tiers, e trocar o array inteiro
+     apagaria fases em uso. Elas entram a partir do índice 16.        */
+
   /* 2.4a Difícil · A Passarela Alternada */
   {tier2:true,
    rows:[
@@ -4333,8 +4423,7 @@ const LEVELS_T2 = [
 "# .  #  L #",
 "# .  # .  #",
 "#    #    #",
-"#####G#####"]},
-
+"#####G#####"]}
 ];
 
 /* ── TIER 3 · Caixa-ponte ──────────────────────────────────────────────── */
@@ -4426,6 +4515,114 @@ const LEVELS_T3 = [
 "#     F    #",
 "#     F    #",
 "#########G##"]},
+  /* ── 3.4 Difícil · "Pontes da Clareira" (criada para a antessala de Dunmare)
+     Junta as duas mecânicas: uma caixa é sacrificada no abismo preenchível (F)
+     para abrir a descida, e cada ponte (B) só abre pela SUA alavanca (L) — o
+     pareamento é pela ordem de leitura do mapa. Os muros centrais ocupam ~34%
+     da área interna, de propósito, para a sala não ser um quadrado vazio.
+     CORRIGIDA: o portão G em (8,6) estava EMPAREDADO — a única vizinha dele,
+     (7,6), era parede, então dava para encaixar as caixas e mesmo assim não
+     havia como alcançar a saída. Abrir (7,6) resolve, e de quebra liga as duas
+     metades do porão pela linha de baixo.
+     Reverificada por busca exaustiva: solução ótima em 30 passos / 6 empurrões,
+     sem depender do atalho da ponte fechada.                               */
+  {tier3:true,
+   rows:[
+"############",
+"#@         #",
+"# $  ####  #",
+"#F##########",
+"#  L    L  #",
+"#B########B#",
+"# $ . # $ .#",
+"#          #",
+"######G#####"]},
+  /* ── 3.5 Difícil · "Raízes Afundadas" (criada para a antessala de Dunmare)
+     Mesma gramática da anterior, com a câmara de baixo partida ao meio: cada
+     caixa só alcança o alvo do seu lado, então a ordem das alavancas importa.
+     CORRIGIDA: mesmo defeito da anterior — o portão G em (8,6) tinha parede em
+     (7,6) e era inalcançável. Era esta a fase relatada como sem solução: a
+     caixa de (6,2) nasce bem em frente ao desembarque da ponte esquerda, o que
+     dá a impressão de ser ela o bloqueio, mas o impedimento real estava na
+     saída.
+     Reverificada por busca exaustiva: solução ótima em 44 passos / 6 empurrões,
+     sem depender do atalho da ponte fechada.                               */
+  {tier3:true,
+   rows:[
+"############",
+"#@    #    #",
+"# $   #    #",
+"#F##########",
+"#  L    L  #",
+"#B########B#",
+"# $  .#  $.#",
+"#  ##      #",
+"######G#####"]},
+
+
+
+  /* ── D7 · Veynor Soterrada (antessala entre F3 e F4) ─────────────
+     Criadas nesta sessao para a antessala; todas verificadas por busca
+     exaustiva (solucao otima + replay) e pela regra da mecanica
+     obrigatoria: a fase fica INSOLUVEL se as pontes nunca abrirem /
+     se o F virar parede.                                            */
+  /* D7.1 · "Tres Vaos"
+     Tres valas preenchiveis, cada uma alinhada com uma passagem de um
+     ladrilho na grade de baixo. Afundar a caixa na vala errada fecha o
+     caminho do alvo: a escolha da coluna e a fase inteira. Solucao otima:
+     91 passos / 33 empurroes. */
+  {tier3:true,
+   rows:[
+"############",
+"#          #",
+"#  $  $    #",
+"#AAFAAFAAFA#",
+"#  .     $ #",
+"###@## ## ##",
+"#          #",
+"#  .       #",
+"#####G######"]},
+  /* D7.2 · "Cisterna de Veynor"
+     As colunas das valas (F) ficam alinhadas com as das pontes (B) — sem
+     esse alinhamento a caixa chega a faixa do meio e nao desce mais, porque
+     empurrar para baixo exige chao na linha de cima. Uma caixa afunda para
+     abrir a descida; as outras duas atravessam por ela e cada ponte pede a
+     sua alavanca. Solucao otima: 112 passos / 35 empurroes. */
+  {tier3:true,
+   rows:[
+"############",
+"#          #",
+"#  $     $ #",
+"#AAFAAAAFAA#",
+"#    L L $@#",
+"#AABAAAABAA#",
+"#.         #",
+"#    .     #",
+"######G#####"]},
+  /* D7.3 · "Cisterna Partida"
+     Fecho da antessala. As valas e as pontes vao para as colunas externas e
+     um pilar parte o porao em dois, entao cada alvo so se alcanca pela
+     metade certa. As duas alavancas ficam lado a lado na parede esquerda,
+     mas a segunda abre a ponte da DIREITA: o pareamento e pela ordem de
+     leitura do mapa, nao pela proximidade. Solucao otima: 128 passos / 46
+     empurroes. */
+  {tier3:true,
+   rows:[
+"############",
+"#          #",
+"#     $  $ #",
+"#AFAAAAAAFA#",
+"#LL @   $  #",
+"#ABAAAAAABA#",
+"#    ##    #",
+"#   .     .#",
+"######G#####"]},
+
+  /* ───── Fases acrescentadas do Motor2D (v53) ─────────────────────────────
+     ACRESCENTADAS, não substituídas: o LEVELS_T3 do jogo já tinha 11 fases,
+     mais do que o Motor2D em alguns tiers, e trocar o array inteiro
+     apagaria fases em uso. Elas entram a partir do índice 11.        */
+
   /* 3.4a Difícil · O Estreito de Dois Passos */
   {tier3:true,
    rows:[
@@ -4464,8 +4661,7 @@ const LEVELS_T3 = [
 "#    F    #",
 "# .     . #",
 "#         #",
-"#####G#####"]},
-
+"#####G#####"]}
 ];
 
 /* ── TIER 4 · Gancho (puxar) ────────────────────────────────────────────
@@ -4560,16 +4756,22 @@ const LEVELS_T4 = [
 "#   .   .  #",
 "#          #",
 "######G#####"]},
+
+  /* ───── Fases acrescentadas do Motor2D (v53) ─────────────────────────────
+     ACRESCENTADAS, não substituídas: o LEVELS_T4 do jogo já tinha 6 fases,
+     mais do que o Motor2D em alguns tiers, e trocar o array inteiro
+     apagaria fases em uso. Elas entram a partir do índice 6.        */
+
   /* 4.4a Difícil · O Resgate na Parede */
   {tier4:true,
    rows:[
 "###########",
-"#$   C   $#",
+"#$   C   C#",
 "#         #",
 "#  #####  #",
 "#  #   #  #",
 "#  # . #  #",
-"#  # . #  #",
+"#  #   #  #",
 "#    @  C #",
 "#####G#####"]},
 
@@ -4597,8 +4799,7 @@ const LEVELS_T4 = [
 "#   #.#    #",
 "#$  #.#    #",
 "#    @  C  #",
-"######G#####"]},
-
+"######G#####"]}
 ];
 
 /* ── TIER 5 · Tudo junto ───────────────────────────────────────────────── */
@@ -4703,6 +4904,12 @@ const LEVELS_T5 = [
 "#  AAAAAAA#",
 "#   F   L.#",
 "###########"]},
+
+  /* ───── Fases acrescentadas do Motor2D (v53) ─────────────────────────────
+     ACRESCENTADAS, não substituídas: o LEVELS_T5 do jogo já tinha 8 fases,
+     mais do que o Motor2D em alguns tiers, e trocar o array inteiro
+     apagaria fases em uso. Elas entram a partir do índice 8.        */
+
   /* 5.4a Difícil · A Fortaleza Submersa */
   {rows:[
 "###########",
@@ -4741,8 +4948,7 @@ const LEVELS_T5 = [
 "#AAAA   AAA#",
 "#   .   .  #",
 "#          #",
-"######G#####"]},
-
+"######G#####"]}
 ];
 
 const SOKOBAN_TIERS = [
@@ -7340,7 +7546,7 @@ h1{font-family:var(--font-display);font-size:clamp(15px,4.4vw,20px);margin:0;
 .room-btn[data-done="1"] .room-tag{color:var(--ok);border-color:var(--ok)}
 
 /* cartões dos modos da Sala dos Sinais */
-.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%}
+.modes{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:100%}
 .mode{display:flex;flex-direction:column;align-items:center;gap:2px;
   padding:16px 8px 12px;border-radius:14px;cursor:pointer;position:relative;
   overflow:hidden;background:var(--panel);border:2px solid var(--line);
@@ -7356,6 +7562,20 @@ h1{font-family:var(--font-display);font-size:clamp(15px,4.4vw,20px);margin:0;
   color:var(--ink-soft);border:1px solid var(--line);border-radius:99px;
   padding:1px 7px;white-space:nowrap}
 .mode[data-done="1"] .mode-rec{color:var(--ok);border-color:var(--ok)}
+
+/* ÍNDICE VERDE = fase livre · VERMELHO = já usada no jogo (ver JOGO_USO) */
+:root{--livre:#2f9e55;--usado:#d0453b}
+.levels button.idx-livre{background:color-mix(in srgb,var(--livre) 28%,var(--panel));border-color:var(--livre);color:var(--ink)}
+.levels button.idx-usado{background:color-mix(in srgb,var(--usado) 30%,var(--panel));border-color:var(--usado);color:var(--ink)}
+.levels button.idx-livre[aria-current="true"],.levels button.idx-usado[aria-current="true"]{outline:2px solid var(--ink);outline-offset:1px;font-weight:700}
+.mode.idx-livre .mode-n,.idx-n.idx-livre{color:var(--livre)}
+.mode.idx-usado .mode-n,.idx-n.idx-usado{color:var(--usado)}
+.idx-n{font-weight:700}
+.uso-tag{display:inline-block;margin-top:4px;font-family:var(--font-data);font-size:9.5px;font-weight:700;
+  border-radius:99px;padding:1px 7px;white-space:nowrap;border:1px solid currentColor}
+.uso-tag.idx-livre{color:var(--livre)} .uso-tag.idx-usado{color:var(--usado)}
+.uso-legenda{margin:-6px 0 0;font-family:var(--font-data);font-size:10.5px;color:var(--ink-soft);text-align:center}
+.uso-legenda b.l{color:var(--livre)} .uso-legenda b.u{color:var(--usado)}
 
 .rules{margin:0;padding:0;list-style:none;counter-reset:rule;
   display:flex;flex-direction:column;gap:7px;width:100%;max-width:400px}
@@ -7568,6 +7788,50 @@ h1{font-family:var(--font-display);font-size:clamp(15px,4.4vw,20px);margin:0;
 
   /* Só existe uma espécie de puzzle agora, mas a lista continua sendo montada
      aqui na casca — é só nesta linha que a ordem das salas é decidida. */
+  /* ═══════════════════════════════════════════════════════════════════════
+     FASES JÁ USADAS NO JOGO PRINCIPAL (ArhenChronicles)
+
+     REGRA DE CORES NOS MENUS DESTE MOTOR:
+       índice VERDE    = fase livre, nenhuma dungeon do jogo usa
+       índice VERMELHO = fase já usada numa antessala de dungeon do jogo
+                         (a etiqueta mostra qual dungeon)
+
+     Esta tabela é a fonte das cores. SEMPRE que uma fase entrar ou sair de
+     uma antessala no jogo (campo `puzzle` em DUNGEON_LEVELS), atualize aqui
+     também. O jogo não pode repetir fase entre dungeons: escolha só verdes.
+     Índices começam em 0 — a fase "1" da tela é a 0 daqui.
+       sokoban:  tier (0 = Tier 1 … 4 = Tier 5) → { fase: "dungeon" }
+       sinais:   nível da Sala dos Sinais        → "dungeon"
+       cristais: fase da Sala de Cristal         → "dungeon"
+     Atualizado em 09/10/2026 (D4, D11 e D13 em 2D; Difícil II na D2).
+     ═══════════════════════════════════════════════════════════════════════ */
+  /* As listas LEVELS_T1..T5 deste motor são CÓPIA das do jogo (09/10/2026), para
+     que o índice daqui seja o mesmo índice do jogo. Fase nova: crie aqui, e ao
+     levar para o jogo acrescente no FIM da lista dos dois arquivos. */
+  const JOGO_USO = {
+    sokoban: {
+      0: { 0:"D1", 3:"D1", 4:"D1", 1:"D6", 7:"D6", 8:"D6" },
+      1: { 3:"D16", 7:"D16" },
+      2: { 0:"D5", 6:"D5", 7:"D5" },
+      3: { 0:"D2", 1:"D2", 2:"D2", 3:"D7", 4:"D7", 5:"D7", 6:"D3", 7:"D3", 8:"D3" },
+      4: { 4:"D13", 5:"D13", 6:"D13", 8:"D4", 9:"D4", 10:"D4" }
+    },
+    sinais:   { 0:"D14", 1:"D10", 2:"D10", 3:"D2" },
+    cristais: { 0:"D11", 1:"D11" }
+  };
+  const usoDe = (tipo, i, tier) => tipo === "sokoban"
+    ? ((JOGO_USO.sokoban[tier] || {})[i] || null) : (JOGO_USO[tipo][i] || null);
+  const usoClasse = d => d ? "idx-usado" : "idx-livre";
+  const usoTexto = d => d ? "usada: " + d : "livre";
+  /* legenda das cores no topo de cada menu de minigame */
+  ["menu-simon","menu-puzzle","menu-sokoban"].forEach(id => {
+    const m = document.getElementById(id), sub = m && m.querySelector(".menu-sub");
+    if(!sub || m.querySelector(".uso-legenda")) return;
+    const p = document.createElement("p"); p.className = "uso-legenda";
+    p.innerHTML = 'Índice <b class="l">verde</b> = livre · <b class="u">vermelho</b> = já usado no jogo';
+    sub.after(p);
+  });
+
   const PUZZLE_MENU = MATCH_LEVELS.map((lv, i) => ({ tipo:"match", i, lv }));
 
   const ICONS = {
@@ -7652,11 +7916,13 @@ h1{font-family:var(--font-display);font-size:clamp(15px,4.4vw,20px);margin:0;
         const b = document.createElement("button");
         b.type = "button";
         /* verde, amarelo, vermelho — as mesmas cores que a sala usa */
-        b.className = "mode c" + [2,1,0][Math.min(i, 2)];
+        const uso = usoDe("sinais", i);
+        b.className = "mode c" + [2,1,0][Math.min(i, 2)] + " " + usoClasse(uso);
         b.innerHTML =
           '<span class="mode-n">' + n + '</span>' +
           '<span class="mode-name">' + lv.name + '</span>' +
           '<span class="mode-sub">' + n + " rodadas · " + (n*(n+1)/2) + ' toques</span>' +
+          '<span class="uso-tag ' + usoClasse(uso) + '">' + usoTexto(uso) + '</span>' +
           '<span class="mode-rec"></span>';
         b.addEventListener("click", () => goSimon(i));
         grid.appendChild(b);
@@ -7681,8 +7947,9 @@ h1{font-family:var(--font-display);font-size:clamp(15px,4.4vw,20px);margin:0;
       if(rec) b.dataset.done = "1";
       b.innerHTML =
         '<span class="room-ico">' + ICONS.match + '</span>' +
-        '<span class="room-txt"><span class="room-name">' + (n+1) + ". " + lv.name + '</span>' +
-        '<span class="room-desc">' + lv.desc + '</span></span>' +
+        '<span class="room-txt"><span class="room-name"><span class="idx-n ' + usoClasse(usoDe("cristais", n)) + '">' + (n+1) + ".</span> " + lv.name + '</span>' +
+        '<span class="room-desc">' + lv.desc + '</span>' +
+        '<span class="uso-tag ' + usoClasse(usoDe("cristais", n)) + '">' + usoTexto(usoDe("cristais", n)) + '</span></span>' +
         '<span class="room-tag">' + (rec ? "✓ " + rec.pushes + " empurrões" : lv.par + " empurrões") + '</span>';
       b.addEventListener("click", () => goPuzzle(n));
       grid.appendChild(b);
@@ -7830,7 +8097,11 @@ h1{font-family:var(--font-display);font-size:clamp(15px,4.4vw,20px);margin:0;
       b.innerHTML =
         '<span class="room-ico">' + ICONS.sokoban + '</span>' +
         '<span class="room-txt"><span class="room-name">' + t.nome + '</span>' +
-        '<span class="room-desc">' + t.mec + '</span></span>' +
+        '<span class="room-desc">' + t.mec + '</span>' +
+        (function(){ const u = Object.keys(JOGO_USO.sokoban[i] || {}).length, l = t.fases.length - u;
+          return '<span><span class="uso-tag idx-livre">' + l + (l === 1 ? " livre" : " livres") + '</span> ' +
+                 '<span class="uso-tag idx-usado">' + u + (u === 1 ? " usada" : " usadas") + '</span></span>'; })() +
+        '</span>' +
         '<span class="room-tag">' + feitas + "/" + t.fases.length + ' fases</span>';
       b.addEventListener("click", () => goSokoban(i, (save.sokoban[i] || {}).ultima || 0));
       grid.appendChild(b);
@@ -7867,12 +8138,15 @@ h1{font-family:var(--font-display);font-size:clamp(15px,4.4vw,20px);margin:0;
     if(kind !== "sokoban" || at < 0){ nav.hidden = true; return; }
     nav.hidden = false;
     const fases = SOKOBAN_TIERS[at].fases, rec = save.sokoban[at] || {};
-    if(nav.children.length !== fases.length){
+    if(nav.children.length !== fases.length || nav.dataset.tier !== String(at)){
+      nav.dataset.tier = String(at);
       nav.innerHTML = "";
       fases.forEach((lv,i) => {
         const b = document.createElement("button");
+        const uso = usoDe("sokoban", i, at);
         b.type = "button"; b.textContent = lv.tutorial ? "★" : String(i+1);
-        b.title = lv.tutorial ? "Tutorial" : "Fase " + (i+1);
+        b.className = usoClasse(uso);
+        b.title = (lv.tutorial ? "Tutorial" : "Fase " + (i+1)) + " · " + usoTexto(uso);
         b.addEventListener("click", () => goSokoban(at, i));
         nav.appendChild(b);
       });
