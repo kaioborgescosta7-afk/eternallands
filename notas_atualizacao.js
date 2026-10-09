@@ -24,7 +24,9 @@
       "✧ <b>Anjo da Guarda</b> chegou ao 🛒 Mural de Compras. Um guardião celestial que desce à masmorra num facho de luz e caminha ao seu lado, rasgando as trevas ao redor dele.",
       "Invoque e dispense quando quiser pelo botão ✧ dentro das masmorras. A chegada e a partida têm feixe celestial, penas de luz e onda de choque no pouso.",
       "É cosmético e permanente: não altera o combate e fica salvo na sua conta, inclusive no save da nuvem.",
-      "✉️ Esta cartinha é nova: toda atualização do jogo passa a ser anunciada aqui, e o histórico fica guardado para você reler."
+      "✉️ Esta cartinha é nova: toda atualização do jogo passa a ser anunciada aqui, e o histórico fica guardado para você reler.",
+      "☀️ <b>Dia de Caça</b> corrigido: o bônus agora vale para todos os monstros do grupo, o +10💰 por abate é pago de verdade e o efeito chega às caçadas e às masmorras.",
+      "⚔️ Nas masmorras, os monstros voltam a aparecer em grupos de 2 ou 3 na batalha. O sprite no mapa é um só, mas a formação é sorteada a cada encontro."
     ]
   };
 
