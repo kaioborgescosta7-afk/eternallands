@@ -26,7 +26,9 @@
       "É cosmético e permanente: não altera o combate e fica salvo na sua conta, inclusive no save da nuvem.",
       "✉️ Esta cartinha é nova: toda atualização do jogo passa a ser anunciada aqui, e o histórico fica guardado para você reler.",
       "☀️ <b>Dia de Caça</b> corrigido: o bônus agora vale para todos os monstros do grupo, o +10💰 por abate é pago de verdade e o efeito chega às caçadas e às masmorras.",
-      "⚔️ Nas masmorras, os monstros voltam a aparecer em grupos de 2 ou 3 na batalha. O sprite no mapa é um só, mas a formação é sorteada a cada encontro."
+      "⚔️ Nas masmorras, os monstros voltam a aparecer em grupos de 2 ou 3 na batalha. O sprite no mapa é um só, mas a formação é sorteada a cada encontro.",
+      "🎭👁️ <b>Baile dos Mortos</b> agora triplica a vida dos mortos-vivos e esqueletos comuns também nas masmorras, e no <b>Olhar de Nhar-Zul</b> o grupo inteiro vira elite.",
+      "💰 <b>Mercado de Renhal</b>: a loja da cidade mostra o preço com desconto. Itens comprados na loja não podem ser revendidos por mais do que você pagou."
     ]
   };
 
