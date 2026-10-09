@@ -186,9 +186,1056 @@
 }
 </style>
 
+<script id="compra-bootstrap">
+/* ═══════════════════════════════════════════════════════════════════════════
+   v51 — REDE DE SEGURANCA DAS COMPRAS  (primeiro script da pagina, de proposito)
+
+   O Kodular dispara Evaluate JS no instante em que o Google Play confirma o
+   pagamento, e logo em seguida chama Consume. Esse instante pode cair ANTES de
+   o jogo (5,5 MB) terminar de carregar: as funcoes de verdade ficam la no fim
+   do arquivo. Se elas ainda nao existirem, a chamada estoura com ReferenceError,
+   o Consume apaga a posse no Google Play, e o jogador paga e nao recebe nada.
+
+   Estes esbocos existem desde a primeira linha: nao entregam nada, so ANOTAM
+   que a compra aconteceu. As funcoes de verdade, mais abaixo, sobrescrevem
+   estes esbocos e leem a anotacao.
+
+   ATENCAO: isto NAO substitui o conserto no bloco do Kodular. O script la esta
+   "adicionarpackstarternojogo;" — sem parenteses, nao chama nada, nem o esboco.
+   Tem que virar "adicionarpackstarternojogo();".
+   ═══════════════════════════════════════════════════════════════════════════ */
+(function(){
+  function anota(chave, valor){ try { localStorage.setItem(chave, valor); } catch(e){} }
+  function le(chave){ try { return localStorage.getItem(chave); } catch(e){ return null; } }
+
+  /* Pack Inicial: a funcao de verdade ja procura esta anotacao ao carregar. */
+  if (typeof window.adicionarpackstarternojogo !== "function") {
+    window.adicionarpackstarternojogo = function(){
+      anota("arhen_pack_starter_pendente", "1");
+      window.__compraChegouCedo = true;
+      try { console.warn("[compra] Pack Inicial confirmado antes do jogo carregar — anotado."); } catch(e){}
+    };
+  }
+
+  /* Gemas: mesmo risco, e o produto mais caro da loja. Acumula a quantidade;
+     quem drena e o patch do pack, depois que o jogo esta de pe. */
+  if (typeof window.adicionarGemasNoJogo !== "function") {
+    window.adicionarGemasNoJogo = function(qtd){
+      qtd = parseInt(qtd, 10) || 0;
+      if (qtd <= 0) return;
+      anota("arhen_gemas_pendentes", String((parseInt(le("arhen_gemas_pendentes"), 10) || 0) + qtd));
+      window.__compraChegouCedo = true;
+      try { console.warn("[compra] " + qtd + " gemas confirmadas antes do jogo carregar — anotadas."); } catch(e){}
+    };
+  }
+
+  /* Anjo da Guarda: item permanente; so anota, o script do anjo entrega. */
+  if (typeof window.adicionarAnjoDaGuardaNoJogo !== "function") {
+    window.adicionarAnjoDaGuardaNoJogo = function(){
+      anota("arhen_anjo_guarda_pendente", "1");
+      window.__compraChegouCedo = true;
+      try { console.warn("[compra] Anjo da Guarda confirmado antes do jogo carregar — anotado."); } catch(e){}
+    };
+  }
+  if (typeof window.adicionarpackangelnojogo !== "function") {
+    window.adicionarpackangelnojogo = function(){ window.adicionarAnjoDaGuardaNoJogo(); };
+  }
+})();
+</script>
+<script id="loja-laboratorio-js">
+/* ════════════════════════════════════════════════════════════════════════
+   LOJA NO LABORATÓRIO — só existe no Motor2D (NÃO levar para o jogo)
+
+   O módulo da loja (script#loja-js, logo abaixo) é cópia fiel do jogo.
+   Este script dá a ele o mínimo do jogo que ele espera encontrar, e põe o
+   botão roxo "Comprar" solto na tela da dungeon.
+
+   · "Jogo de mentira": G (herói nível 1, inventário), ITEMS, EPITHETS_CATALOG,
+     addItem, blog (aviso na tela), showO (janela simples), goldEarn,
+     earnEpithet e saveGame. Só preenche o que NÃO existir.
+   · Compra de verdade só dentro do app (Kodular): o botão manda o SKU por
+     AppInventor.setWebViewString, igual no jogo. No navegador, simule a
+     confirmação no console:
+         adicionarpackangelnojogo()      adicionarpackstarternojogo()
+         adicionarGemasNoJogo(100)
+     e para desfazer o anjo:  AnjoDaGuarda.debug.revogar()
+   ════════════════════════════════════════════════════════════════════════ */
+(function(){
+  "use strict";
+
+  /* ── jogo de mentira ── */
+  if (!window.G) window.G = { hero:{ level:1, name:"Herói do Laboratório" }, heroName:"Herói do Laboratório", currentSlot:0, inventory:[] };
+  if (!window.ITEMS) window.ITEMS = {};
+  if (!window.EPITHETS_CATALOG) window.EPITHETS_CATALOG = {};
+  if (typeof window.addItem !== "function") window.addItem = function(id, qtd){
+    qtd = qtd || 1;
+    var e = G.inventory.find(function(x){ return x.id === id; });
+    if (e) e.qty += qtd; else G.inventory.push({ id:id, qty:qtd });
+  };
+  if (typeof window.goldEarn !== "function") window.goldEarn = function(n){
+    G.gold = (G.gold || 0) + n; return { wallet:n, bank:0, total:n };
+  };
+  if (typeof window.earnEpithet !== "function") window.earnEpithet = function(id){ (G.epithets = G.epithets || []).push(id); };
+  if (typeof window.saveGame !== "function") window.saveGame = function(){};
+
+  var avisoT = 0;
+  if (typeof window.blog !== "function") window.blog = function(msg){
+    var el = document.getElementById("loja-lab-aviso");
+    if (!el) { el = document.createElement("div"); el.id = "loja-lab-aviso"; document.body.appendChild(el); }
+    el.innerHTML = msg; el.style.opacity = "1";
+    clearTimeout(avisoT); avisoT = setTimeout(function(){ el.style.opacity = "0"; }, 3200);
+  };
+  if (typeof window.showO !== "function") window.showO = function(titulo, msg, botoes){
+    var fundo = document.createElement("div"); fundo.className = "loja-lab-janela";
+    var caixa = document.createElement("div");
+    var h = document.createElement("b"); h.textContent = titulo;
+    var p = document.createElement("p"); p.textContent = msg;
+    var linha = document.createElement("div");
+    (botoes && botoes.length ? botoes : [{ label:"OK" }]).forEach(function(b){
+      var bt = document.createElement("button"); bt.type = "button"; bt.textContent = b.label;
+      bt.onclick = function(){ fundo.remove(); if (typeof b.cb === "function") b.cb(); };
+      linha.appendChild(bt);
+    });
+    caixa.appendChild(h); caixa.appendChild(p); caixa.appendChild(linha); fundo.appendChild(caixa);
+    document.body.appendChild(fundo);
+  };
+
+  /* ── visual do botão "Comprar": copiado do CSS do jogo (perifericos-css) ── */
+  var CSS = "" +
+    ".frag-buy-btn{font-size:11px;font-weight:bold;padding:5px 14px;margin-left:8px;vertical-align:middle;border:1px solid #d966ff;border-radius:20px;color:#fff8ff;background:linear-gradient(135deg,#5a0099 0%,#aa00ff 45%,#ff33cc 100%);letter-spacing:.3px;cursor:pointer;position:relative;overflow:hidden;isolation:isolate;text-shadow:0 1px 2px rgba(0,0,0,.55);box-shadow:0 0 8px rgba(200,0,255,.55),0 2px 5px rgba(0,0,0,.45);animation:fragBtnPulse 2.4s ease-in-out infinite;transition:transform .15s ease,box-shadow .15s ease,filter .15s ease}" +
+    ".frag-buy-btn::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;background:linear-gradient(120deg,transparent 35%,rgba(255,255,255,.65) 50%,transparent 65%);background-size:250% 100%;background-position:200% 0}" +
+    ".frag-buy-btn.frag-shimmer-play::before{animation:fragBtnShimmerOnce 5s linear 1 forwards}" +
+    ".frag-buy-btn span{position:relative;z-index:2}" +
+    ".frag-buy-btn:hover{transform:translateY(-1px) scale(1.06);filter:brightness(1.12);box-shadow:0 0 16px rgba(220,60,255,.9),0 3px 9px rgba(0,0,0,.5);border-color:#ffb0ff}" +
+    ".frag-buy-btn:active{transform:translateY(0) scale(.96)}" +
+    ".frag-buy-btn{white-space:nowrap;flex-shrink:0}" +
+    "@keyframes fragBtnPulse{0%,100%{box-shadow:0 0 8px rgba(200,0,255,.5),0 2px 5px rgba(0,0,0,.45)}50%{box-shadow:0 0 20px rgba(230,80,255,.9),0 2px 5px rgba(0,0,0,.45)}}" +
+    "@keyframes fragBtnShimmerOnce{0%{background-position:-200% 0}60%{background-position:200% 0}100%{background-position:200% 0}}" +
+    /* botão solto na dungeon, à esquerda do ✧ do anjo */
+    ".loja-lab-wrap{position:absolute;top:46px;right:56px;z-index:70;display:flex;align-items:center;gap:6px;font-family:Georgia,serif}" +
+    ".loja-lab-wrap .frag-buy-btn{margin:0;padding:7px 16px;font-family:Georgia,serif}" +
+    ".loja-lab-frag{font-size:11px;font-weight:bold;color:#ffa0ff;background:rgba(10,8,14,.8);border:1px solid rgba(217,102,255,.45);border-radius:99px;padding:2px 8px}" +
+    "#loja-lab-aviso{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:10060;max-width:90vw;padding:8px 14px;border-radius:10px;background:rgba(20,10,4,.94);border:1px solid #c9a35a;color:#ffe0b0;font:12px/1.4 Georgia,serif;text-align:center;opacity:0;transition:opacity .3s;pointer-events:none}" +
+    ".loja-lab-janela{position:fixed;inset:0;z-index:10070;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.75)}" +
+    ".loja-lab-janela>div{max-width:380px;width:100%;padding:16px;border:1px solid #c9a35a;border-radius:10px;background:#1a0f05;color:#ffd080;font:12px/1.45 Georgia,serif}" +
+    ".loja-lab-janela b{display:block;font-size:14px;color:#ffb060;margin-bottom:8px}" +
+    ".loja-lab-janela p{white-space:pre-wrap;margin:0 0 14px}" +
+    ".loja-lab-janela div div{display:flex;justify-content:flex-end;gap:8px}" +
+    ".loja-lab-janela button{background:#3a1e00;border:1px solid #ffb060;color:#ffb060;border-radius:4px;padding:7px 14px;font:12px Georgia,serif;cursor:pointer}";
+  function garantirCss(){
+    if (document.getElementById("loja-lab-css")) return;
+    var s = document.createElement("style"); s.id = "loja-lab-css"; s.textContent = CSS;
+    (document.head || document.documentElement).appendChild(s);
+  }
+  garantirCss();
+
+  function fragmentos(){
+    var e = G.inventory && G.inventory.find(function(x){ return x.id === "fragmento_cristal"; });
+    return e ? e.qty | 0 : 0;
+  }
+
+  /* chamado pela dungeon: põe o botão na tela dela e tira quando ela fecha */
+  function montar(mount, signal){
+    if (!mount) return;
+    var wrap = document.createElement("div");
+    wrap.className = "loja-lab-wrap";
+    wrap.innerHTML = '<span class="loja-lab-frag" title="Fragmentos de Cristal">💎 0</span>' +
+      '<button type="button" class="btn frag-buy-btn frag-shimmer-play" id="frag-buy-btn"><span>💎 Comprar</span></button>';
+    var btn = wrap.querySelector("button"), cont = wrap.querySelector(".loja-lab-frag");
+    btn.addEventListener("click", function(e){ e.stopPropagation(); window.abrirLojaFragmentos(); btn.blur(); });
+    /* não deixa o toque no botão virar passo do herói na dungeon */
+    ["pointerdown", "touchstart", "mousedown"].forEach(function(t){ wrap.addEventListener(t, function(e){ e.stopPropagation(); }); });
+    mount.appendChild(wrap);
+    var t = setInterval(function(){
+      if (wrap.parentNode !== mount) mount.appendChild(wrap);
+      cont.textContent = "💎 " + fragmentos();
+      if (window.Loja) window.Loja.pintarNovidade();
+    }, 700);
+    if (signal) signal.addEventListener("abort", function(){ clearInterval(t); wrap.remove(); }, { once:true });
+  }
+
+  window.LojaLab = { montar: montar };
+})();
+</script>
+<!-- ════════════════════════════════════════════════════════════════════════
+     INÍCIO DO MÓDULO LOJA  ·  script#loja-js
+     ════════════════════════════════════════════════════════════════════════ -->
+<script id="loja-js">
+/* ════════════════════════════════════════════════════════════════════════
+   MÓDULO LOJA — Mural de Compras  ·  INÍCIO
+
+   Tudo o que é da loja fica entre este cabeçalho e o rodapé "MÓDULO LOJA ·
+   FIM". Quem for mexer na loja mexe aqui dentro.
+
+   SEÇÕES
+     1. NÚCLEO ......... catálogo (LOJA_PRODUTOS), modal do Mural, botão de
+                         compra (comprarPacote → Kodular) e entrega das gemas
+                         (adicionarGemasNoJogo)
+     2. API ............ Loja.registrarProduto / Loja.aoAbrir e a bolinha
+                         de NOVIDADE no botão roxo "Comprar"
+     3. PRODUTO ........ Pack Inicial (Kit de Lançamento) — entrega,
+                         restituição e Tomo do Aventureiro
+     4. PRODUTO ........ Anjo da Guarda → mora no script próprio
+                         script#anjo-da-guarda-js (registra-se pela API)
+
+   COMO ADICIONAR UM PRODUTO
+     · Pequeno: uma seção nova aqui, "N. PRODUTO · Nome", usando
+       Loja.registrarProduto(...). Grande (com jogo próprio, como o anjo):
+       script próprio que chama Loja.registrarProduto.
+     · Troque Loja.NOVIDADE (seção 2) pelo SKU novo para acender a bolinha.
+     · Kodular: o botão manda o SKU por AppInventor.setWebViewString(sku); o
+       bloco do Kodular confirma o pagamento e chama a função de entrega
+       (ex.: adicionarpackangelnojogo();). Consumível → Consume; permanente
+       → NÃO consumir.
+     · Crie também o esboço da função de entrega no script#compra-bootstrap.
+
+   O QUE FICA FORA DESTE MÓDULO, DE PROPÓSITO
+     · script#compra-bootstrap — esboços das funções de entrega. TEM
+       que ser o primeiro script da página (a compra pode chegar antes de o
+       jogo carregar), então não pode morar aqui.
+     · Fragmentos de Cristal como moeda (item, contagem, linha da barra
+       lateral com o botão "Comprar") — em ui-systems-shared-core-js.
+     · Visual do botão "Comprar" (.frag-buy-btn) — no CSS perifericos-css;
+       brilho dele — crystal-rewards-visuals-js.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* ──────────────────────────────────────────────────────────────────────
+   1. NÚCLEO: catálogo, Mural, compra e entrega das gemas
+   ────────────────────────────────────────────────────────────────────── */
+(function() {
+  var LOJA_PRODUTOS = [ {
+    sku: "pack_10_gems",
+    icon: "💎",
+    image: "https://raw.githubusercontent.com/kaioborgescosta7-afk/eternallands/master/frag10.png",
+    priceLabel: "R$ 1,49",
+    name: "Pacote de 10 Fragmentos",
+    desc: "Um punhado de cristal para começar.",
+    qty: 10,
+    tier: "raro",
+    tierLabel: "RARO",
+    gems: "💎",
+    badge: null,
+    note: null
+  }, {
+    sku: "pack_100_gems",
+    icon: "💎",
+    image: "https://raw.githubusercontent.com/kaioborgescosta7-afk/eternallands/master/frag100.png",
+    priceLabel: "R$ 7,90",
+    name: "Pacote de 100 Fragmentos",
+    desc: "Cristal puro, pronto para forja e pactos.",
+    qty: 100,
+    tier: "epico",
+    tierLabel: "ÉPICO",
+    gems: "💎💎💎",
+    badge: "MAIS ESCOLHIDO",
+    note: "Melhor equilíbrio entre preço e poder."
+  }, {
+    sku: "pack_1000_gems",
+    icon: "💎",
+    image: "https://raw.githubusercontent.com/kaioborgescosta7-afk/eternallands/master/frag1000.png",
+    priceLabel: "R$ 49,90",
+    name: "Pacote de 1000 Fragmentos",
+    desc: "Um verdadeiro tesouro de cristal, para os que buscam poder sem espera.",
+    qty: 1000,
+    tier: "lendario",
+    tierLabel: "LENDÁRIO",
+    gems: "💎💎💎💎💎",
+    badge: "MELHOR OFERTA",
+    note: "Maior valor por fragmento. Para quem não quer esperar."
+  } ];
+  window.LOJA_PRODUTOS = LOJA_PRODUTOS;
+  function findProduto(sku) {
+    return LOJA_PRODUTOS.find(function(entry) {
+      return entry.sku === sku;
+    });
+  }
+  var LOJA_TIER_COLOR = {
+    raro:     { border: "#4080ff", glow: "rgba(64,128,255,.45)",  text: "#8fb8ff" },
+    epico:    { border: "#c060ff", glow: "rgba(192,96,255,.5)",   text: "#d9a8ff" },
+    lendario: { border: "#ffaa00", glow: "rgba(255,170,0,.55)",   text: "#ffd080" }
+  };
+  function ensureLojaCss() {
+    if (document.getElementById("loja-frag-css")) return;
+    var css = "" +
+      "#loja-frag-modal{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 30%,rgba(40,10,60,.55),rgba(0,0,0,.9));z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;animation:lojaFadeIn .2s ease-out}" +
+      "@keyframes lojaFadeIn{from{opacity:0}to{opacity:1}}" +
+      "#loja-frag-box{background:linear-gradient(160deg,#241108,#0d0500);border:2px solid #c9a35a;border-radius:16px;max-width:600px;width:100%;padding:20px;color:#f0e0c0;max-height:88vh;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,.7),0 0 0 4px rgba(201,163,90,.10) inset;animation:lojaPop .3s cubic-bezier(.2,1.4,.4,1)}" +
+      "@keyframes lojaPop{from{transform:scale(.9) translateY(14px);opacity:0}to{transform:none;opacity:1}}" +
+      "#loja-frag-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}" +
+      "#loja-frag-title{font-size:17px;color:#ffd080;font-weight:bold;text-shadow:0 0 10px rgba(255,208,128,.35)}" +
+      "#loja-frag-close{background:none;border:none;color:#c09060;font-size:18px;cursor:pointer;padding:0 4px}" +
+      "#loja-frag-close:hover{color:#ffd080}" +
+      "#loja-frag-sub{font-size:11px;color:#c09060;font-style:italic;margin-bottom:14px}" +
+      "#loja-frag-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}" +
+      "@media (max-width:560px){#loja-frag-grid{grid-template-columns:1fr}}" +
+      ".loja-card{position:relative;background:linear-gradient(180deg,#1c0d05,#100600);border-radius:12px;padding:14px 10px 12px;text-align:center;display:flex;flex-direction:column;align-items:center;transition:transform .15s ease}" +
+      ".loja-card:hover{transform:translateY(-3px)}" +
+      ".loja-card--raro{border:1px solid #4080ff;box-shadow:0 0 10px rgba(64,128,255,.28)}" +
+      ".loja-card--epico{border:1px solid #c060ff;box-shadow:0 0 14px rgba(192,96,255,.32)}" +
+      ".loja-card--lendario{border:1px solid #ffaa00;box-shadow:0 0 18px rgba(255,170,0,.4);position:relative;overflow:hidden}" +
+      ".loja-card--lendario::before{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,transparent 40%,rgba(255,220,150,.28) 50%,transparent 60%);background-size:250% 100%;animation:lojaShimmer 2.6s linear infinite}" +
+      "@keyframes lojaShimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}" +
+      ".loja-card-badge-ribbon{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:bold;letter-spacing:.4px;padding:2px 8px;border-radius:999px;white-space:nowrap;z-index:2}" +
+      ".loja-card--epico .loja-card-badge-ribbon{background:linear-gradient(90deg,#7c3aed,#c060ff);color:#fff}" +
+      ".loja-card--lendario .loja-card-badge-ribbon{background:linear-gradient(90deg,#f59e0b,#ffd080);color:#3a1e00}" +
+      ".loja-card-chest{line-height:1;margin:14px 0 2px;filter:drop-shadow(0 0 8px rgba(255,255,255,.15))}" +
+      ".loja-card-chest-img{width:64px;height:64px;object-fit:contain;display:block;margin:0 auto}" +
+      ".loja-card--epico .loja-card-chest-img{width:76px;height:76px}" +
+      ".loja-card--lendario .loja-card-chest{filter:drop-shadow(0 0 14px rgba(255,180,60,.6))}" +
+      ".loja-card--lendario .loja-card-chest-img{width:88px;height:88px}" +
+      ".loja-card-gems{display:block;font-size:11px;letter-spacing:1px;margin-bottom:6px;opacity:.9}" +
+      ".loja-card-name{font-size:12px;color:#ffd080;font-weight:bold;margin-bottom:3px}" +
+      ".loja-card-rarity{display:inline-block;font-size:9px;font-weight:bold;letter-spacing:.1em;padding:2px 8px;border-radius:999px;margin-bottom:6px}" +
+      ".loja-card--raro .loja-card-rarity{background:rgba(64,128,255,.15);color:#8fb8ff;border:1px solid rgba(64,128,255,.4)}" +
+      ".loja-card--epico .loja-card-rarity{background:rgba(192,96,255,.15);color:#d9a8ff;border:1px solid rgba(192,96,255,.4)}" +
+      ".loja-card--lendario .loja-card-rarity{background:rgba(255,170,0,.15);color:#ffd080;border:1px solid rgba(255,170,0,.45)}" +
+      ".loja-card-desc{font-size:10px;color:#a08060;line-height:1.4;margin-bottom:6px;min-height:28px}" +
+      ".loja-card-note{font-size:9px;color:#88ff88;font-style:italic;margin-bottom:8px;min-height:12px}" +
+      ".loja-card-btn{width:100%;font-size:11px;padding:7px 0;border-radius:6px;font-weight:bold;cursor:pointer;font-family:Georgia,serif}" +
+      ".loja-card--raro .loja-card-btn{background:#152238;border:1px solid #4080ff;color:#8fb8ff}" +
+      ".loja-card--raro .loja-card-btn:hover{background:#1c2e4a}" +
+      ".loja-card--epico .loja-card-btn{background:#26123a;border:1px solid #c060ff;color:#e9d5ff}" +
+      ".loja-card--epico .loja-card-btn:hover{background:#331850}" +
+      ".loja-card--lendario .loja-card-btn{background:linear-gradient(90deg,#f59e0b,#ffd080);border:1px solid #ffaa00;color:#2a1400;box-shadow:0 4px 14px rgba(255,170,0,.35)}" +
+      ".loja-card--lendario .loja-card-btn:hover{filter:brightness(1.08)}";
+    var s = document.createElement("style");
+    s.id = "loja-frag-css";
+    s.textContent = css;
+    document.head.appendChild(s);
+  }
+  window.abrirLojaFragmentos = function() {
+    ensureLojaCss();
+    var old = document.getElementById("loja-frag-modal");
+    if (old) old.remove();
+    var itemsHtml = LOJA_PRODUTOS.map(function(entry) {
+      var ribbon = entry.badge ? '<div class="loja-card-badge-ribbon">' + entry.badge + "</div>" : "";
+      return '<div class="loja-card loja-card--' + entry.tier + '">' +
+        ribbon +
+        '<div class="loja-card-chest"><img src="' + entry.image + '" alt="' + entry.name + '" class="loja-card-chest-img"></div>' +
+        '<span class="loja-card-gems">' + entry.gems + "</span>" +
+        '<div class="loja-card-name">' + entry.name + "</div>" +
+        '<div class="loja-card-rarity">' + entry.tierLabel + "</div>" +
+        '<div class="loja-card-desc">' + entry.desc + "</div>" +
+        '<div class="loja-card-note">' + (entry.note || "") + "</div>" +
+        '<button class="loja-card-btn" id="loja-btn-' + entry.sku + '" onclick="window.comprarPacote(\'' + entry.sku + '\')">Comprar · ' + entry.priceLabel + '</button>' +
+        "</div>";
+    }).join("");
+    var html = '<div id="loja-frag-modal">' +
+      '<div id="loja-frag-box">' +
+      '<div id="loja-frag-hdr">' +
+      '<div id="loja-frag-title">🛒 Mural de Compras</div>' +
+      '<button id="loja-frag-close" onclick="window.fecharLojaFragmentos()">✕</button>' +
+      "</div>" +
+      '<div id="loja-frag-sub">Fragmentos de Cristal para acelerar sua jornada. Mais itens chegarão em breve a este mural.</div>' +
+      '<div id="loja-frag-grid">' + itemsHtml + "</div>" +
+      '<div id="loja-frag-status" style="font-size:10px;color:#88ff88;text-align:center;min-height:14px;margin-top:12px"></div>' +
+      "</div></div>";
+    document.body.insertAdjacentHTML("beforeend", html);
+  };
+  window.fecharLojaFragmentos = function() {
+    var modal = document.getElementById("loja-frag-modal");
+    if (modal) modal.remove();
+  };
+  window.comprarPacote = function(sku) {
+    var produto = findProduto(sku);
+    var statusEl = document.getElementById("loja-frag-status");
+    if (!produto) {
+      if (statusEl) statusEl.textContent = "⚠️ Produto não encontrado.";
+      return;
+    }
+    try {
+      if (window.AppInventor && typeof window.AppInventor.setWebViewString === "function") {
+        window.AppInventor.setWebViewString(sku);
+        if (statusEl) statusEl.textContent = "⏳ Abrindo pagamento...";
+      } else {
+        if (statusEl) statusEl.textContent = "⚠️ Compras disponíveis apenas no aplicativo.";
+        if (typeof blog === "function") blog("🛒 Compras funcionam apenas dentro do aplicativo.", "ls");
+      }
+    } catch (err) {
+      if (statusEl) statusEl.textContent = "⚠️ Erro ao iniciar a compra.";
+    }
+  };
+  window.adicionarGemasNoJogo = function(qtd) {
+    qtd = parseInt(qtd, 10) || 0;
+    if (qtd <= 0) return;
+    if (typeof addItem === "function") addItem("fragmento_cristal", qtd);
+    if (typeof blog === "function") blog("💎 +" + qtd + " Fragmentos de Cristal (compra confirmada!)", "ll");
+    var statusEl = document.getElementById("loja-frag-status");
+    if (statusEl) statusEl.textContent = "✅ Compra concluída!";
+    setTimeout(function() {
+      window.fecharLojaFragmentos();
+    }, 900);
+    if (typeof renderSidebar === "function") try {
+      renderSidebar();
+    } catch (err) {}
+    if (typeof renderStatusPanel === "function") try {
+      renderStatusPanel();
+    } catch (err) {}
+  };
+})();
+
+/* ──────────────────────────────────────────────────────────────────────
+   2. API DE PRODUTOS + NOVIDADE (bolinha no botão roxo "Comprar")
+
+   Produto novo, num script próprio ou numa seção nova deste módulo:
+       Loja.registrarProduto({ sku:"pack_x", name:..., priceLabel:"R$ x",
+                               image:..., tier:..., tierLabel:..., desc:...,
+                               badge:..., note:..., gems:"" },
+                             { decorar: function(cartao){ ... } });
+   · `decorar` roda toda vez que o Mural abre, com o .loja-card do produto
+     (para vitrines, textos extras, "✓ Adquirido" etc.).
+   · Loja.aoAbrir(fn) roda fn() depois de cada abertura do Mural.
+
+   NOVIDADE: troque Loja.NOVIDADE pelo SKU do produto mais novo para a
+   bolinha vermelha voltar no botão "Comprar" de todos os jogadores. Ela
+   some quando o jogador abre o Mural. Sem novidade, deixe "".
+   ────────────────────────────────────────────────────────────────────── */
+(function(){
+  "use strict";
+  var NOVIDADE = "pack_angel";
+  var KEY_NOVIDADE = "arhen_loja_novidade_vista";
+
+  function ler(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+  function gravar(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
+
+  var decoradores = {};   /* sku -> fn(cartao) */
+  var aoAbrir = [];
+
+  function registrarProduto(produto, ganchos){
+    if (!produto || !produto.sku) return;
+    var lista = window.LOJA_PRODUTOS;
+    if (!lista) return;
+    var ja = lista.some(function(p){ return p.sku === produto.sku; });
+    if (!ja) lista.unshift(produto);
+    if (ganchos && typeof ganchos.decorar === "function") decoradores[produto.sku] = ganchos.decorar;
+  }
+
+  function depoisDeAbrir(){
+    Object.keys(decoradores).forEach(function(sku){
+      var btn = document.getElementById("loja-btn-" + sku);
+      var cartao = btn && btn.closest ? btn.closest(".loja-card") : null;
+      if (cartao) { try { decoradores[sku](cartao); } catch(e){ console.error("[loja] decorar " + sku, e); } }
+    });
+    aoAbrir.forEach(function(fn){ try { fn(); } catch(e){ console.error("[loja] aoAbrir", e); } });
+    novidadeVista();
+  }
+  var _abrir = window.abrirLojaFragmentos;
+  window.abrirLojaFragmentos = function(){
+    var r = _abrir.apply(this, arguments);
+    depoisDeAbrir();
+    return r;
+  };
+
+  /* ── bolinha de novidade ── */
+  var CSS = "" +
+    /* maciça e FORA do botão (ele tem overflow:hidden), sobrando no canto */
+    ".loja-nova-dot{position:absolute;z-index:5;width:13px;height:13px;border-radius:50%;pointer-events:none;background:#e31b1b;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.65);animation:lojaDotPulse 1.25s ease-in-out infinite}" +
+    "@keyframes lojaDotPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}";
+  function garantirCss(){
+    if (document.getElementById("loja-novidade-css")) return;
+    var s = document.createElement("style"); s.id = "loja-novidade-css"; s.textContent = CSS;
+    (document.head || document.documentElement).appendChild(s);
+  }
+  function temNovidade(){ return !!NOVIDADE && ler(KEY_NOVIDADE) !== NOVIDADE; }
+  function pintarNovidade(){
+    var nova = temNovidade();
+    Array.prototype.forEach.call(document.querySelectorAll(".loja-nova-dot"), function(dot){
+      if (!nova || !dot._btn || !dot._btn.isConnected) dot.remove();
+    });
+    if (!nova) return;
+    garantirCss();
+    Array.prototype.forEach.call(document.querySelectorAll(".frag-buy-btn"), function(btn){
+      var pai = btn.parentNode;
+      if (!pai || btn.offsetParent === null) return;
+      var dot = btn._lojaDot;
+      if (!dot || !dot.isConnected) {
+        if (getComputedStyle(pai).position === "static") pai.style.position = "relative";
+        dot = document.createElement("span"); dot.className = "loja-nova-dot"; dot._btn = btn;
+        pai.appendChild(dot); btn._lojaDot = dot;
+      }
+      /* canto superior direito do botão, sobrando um pouco para fora */
+      dot.style.left = (btn.offsetLeft + btn.offsetWidth - 11) + "px";
+      dot.style.top = (btn.offsetTop - 4) + "px";
+    });
+  }
+  function novidadeVista(){
+    if (!temNovidade()) return;
+    gravar(KEY_NOVIDADE, NOVIDADE);
+    pintarNovidade();
+  }
+  /* o botão "Comprar" é recriado a cada renderSidebar: repinta depois de cada um */
+  function embrulharSidebar(){
+    var _side = window.renderSidebar;
+    if (typeof _side !== "function" || _side.__lojaNovidade) return;
+    var w = function(){
+      var r = _side.apply(this, arguments);
+      try { pintarNovidade(); } catch(e){}
+      return r;
+    };
+    w.__lojaNovidade = true;
+    window.renderSidebar = w;
+  }
+  embrulharSidebar();
+  window.addEventListener("resize", function(){ pintarNovidade(); });
+  function iniciar(){
+    embrulharSidebar();     /* de novo: patches posteriores podem ter trocado a função */
+    pintarNovidade();
+    setInterval(pintarNovidade, 1500);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar, { once:true });
+  else iniciar();
+
+  window.Loja = {
+    NOVIDADE: NOVIDADE,
+    registrarProduto: registrarProduto,
+    aoAbrir: function(fn){ if (typeof fn === "function") aoAbrir.push(fn); },
+    abrir: function(){ return window.abrirLojaFragmentos(); },
+    fechar: function(){ return window.fecharLojaFragmentos(); },
+    pintarNovidade: pintarNovidade
+  };
+})();
+
+/* ──────────────────────────────────────────────────────────────────────
+   3. PRODUTO · Pack Inicial (Kit de Lançamento)
+      SKU pack_starter · Kodular chama adicionarpackstarternojogo();
+   ────────────────────────────────────────────────────────────────────── */
+(function(){
+
+  var TOMO_DEV_TEXTO =
+    "Obrigado por fazer parte desta jornada! Cada item adquirido representa muito mais que uma compra: é um investimento no futuro de Crônicas de Arhen. " +
+    "Seu apoio nos permite continuar desenvolvendo novas cidades, dungeons, histórias, equipamentos e futuras expansões.\n\n" +
+    "Optamos por manter o jogo livre de anúncios, preservando uma experiência imersiva e sem interrupções. Seu apoio nos permite seguir esse caminho e continuar investindo no desenvolvimento do jogo.\n\n" +
+    "Você motiva nossa equipe a seguir criando este mundo com dedicação e paixão. Obrigado por acreditar no projeto e por caminhar conosco nessa aventura.\n\n" +
+    "Ass. ShowTime";
+
+  function ensureItems(){
+    if (!window.ITEMS) { setTimeout(ensureItems, 200); return; }
+
+    if (!ITEMS.tomo_desenvolvedor) ITEMS.tomo_desenvolvedor = {
+      name: "Tomo do Desenvolvedor",
+      icon: "📖",
+      slot: "tome",
+      cls: "any",
+      desc: "Uma mensagem exclusiva do criador de Crônicas de Arhen, para quem apoiou o jogo desde o lançamento.",
+      studyDesc: "Uma carta pessoal, guardada com carinho entre as páginas.",
+      studyText: TOMO_DEV_TEXTO,
+      price: 0,
+      quest: true,
+      isTome: true
+    };
+
+    if (!ITEMS.tomo_aventureiro) ITEMS.tomo_aventureiro = {
+      name: "Tomo do Aventureiro",
+      icon: "📗",
+      slot: "consumable",
+      cls: "any",
+      desc: "Consumível: concede +25% de experiência por 1 hora ao ser usado.",
+      price: 0
+    };
+
+    if (!ITEMS.selo_fundador) ITEMS.selo_fundador = {
+      name: "Selo do Fundador",
+      icon: "✨",
+      slot: "trophy",
+      cls: "any",
+      desc: "Um item permanente, sem atributos, impossível de obter futuramente. Um símbolo de que você apoiou Crônicas de Arhen durante seu lançamento.",
+      price: 0,
+      quest: true
+    };
+  }
+  ensureItems();
+
+  function ensureEpithet(){
+    if (!window.EPITHETS_CATALOG) { setTimeout(ensureEpithet, 200); return; }
+    if (!EPITHETS_CATALOG.patrono_arhen) EPITHETS_CATALOG.patrono_arhen = {
+      id: "patrono_arhen",
+      label: "Patrono de Crônicas de Arhen",
+      emoji: "🏅",
+      desc: "Concedido aos aventureiros que acreditaram no mundo de Arhen desde seus primeiros dias.",
+      source: "Kit de Lançamento de Crônicas de Arhen"
+    };
+  }
+  ensureEpithet();
+
+  function ensureProduto(){
+    if (!window.LOJA_PRODUTOS) { setTimeout(ensureProduto, 200); return; }
+    var jaTem = LOJA_PRODUTOS.some(function(p){ return p.sku === "pack_starter"; });
+    if (!jaTem) {
+      LOJA_PRODUTOS.unshift({
+        sku: "pack_starter",
+        icon: "🎁",
+        image: "https://raw.githubusercontent.com/kaioborgescosta7-afk/eternallands/master/packstarter.png",
+        priceLabel: "R$ 4,99",
+        name: "Pack Inicial — Kit de Lançamento",
+        desc: "Kit de Lançamento de Crônicas de Arhen: um tomo pessoal do desenvolvedor, epíteto exclusivo, ouro, poções superiores, uma armadura e um item colecionável que não voltará a existir.",
+        tier: "prateado",
+        tierLabel: "FUNDADOR",
+        gems: "🎁🎁🎁",
+        badge: "KIT DE LANÇAMENTO",
+        note: "Edição única — não retornará após o lançamento."
+      });
+    }
+  }
+  ensureProduto();
+
+  function ensureFounderCss(){
+    if (document.getElementById("loja-founder-css")) return;
+    var css = "" +
+      ".loja-card--prateado{border:1px solid #b9c4d1;box-shadow:0 0 12px rgba(185,196,209,.4);position:relative;overflow:hidden}" +
+      ".loja-card--prateado::before{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,transparent 40%,rgba(224,232,240,.30) 50%,transparent 60%);background-size:250% 100%;animation:lojaShimmer 2.6s linear infinite}" +
+      ".loja-card--prateado .loja-card-badge-ribbon{background:linear-gradient(90deg,#8b97a6,#dbe3ec);color:#1a222c}" +
+      ".loja-card--prateado .loja-card-chest{filter:drop-shadow(0 0 12px rgba(200,212,226,.6))}" +
+      ".loja-card--prateado .loja-card-chest-img{width:84px;height:84px}" +
+      ".loja-card--prateado .loja-card-rarity{background:rgba(185,196,209,.16);color:#dbe3ec;border:1px solid rgba(185,196,209,.45)}" +
+      ".loja-card--prateado .loja-card-btn{background:linear-gradient(90deg,#7c8798,#c7d1de);border:1px solid #b9c4d1;color:#1a222c;box-shadow:0 4px 14px rgba(185,196,209,.35)}" +
+      ".loja-card--prateado .loja-card-btn:hover{filter:brightness(1.08)}";
+    var s = document.createElement("style");
+    s.id = "loja-founder-css";
+    s.textContent = css;
+    document.head.appendChild(s);
+  }
+
+  function decorateMural(){
+    try {
+      var sub = document.getElementById("loja-frag-sub");
+      if (sub && !document.getElementById("loja-founder-banner")) {
+        var banner = document.createElement("div");
+        banner.id = "loja-founder-banner";
+        banner.style.cssText = "margin:0 0 14px;padding:10px 12px;border:1px solid #ffd080;border-radius:10px;background:linear-gradient(135deg,rgba(255,208,128,.14),rgba(255,150,60,.06));font-size:11px;color:#ffe0b0;line-height:1.5;text-align:center";
+        banner.innerHTML = "💌 <b>O desenvolvedor do jogo quer te agradecer.</b><br>" +
+          '<span style="font-size:10px;color:#e0c090;font-style:italic">O Pack Inicial traz um tomo pessoal do criador de Crônicas de Arhen — e itens exclusivos que não voltarão a existir.</span>';
+        sub.parentNode.insertBefore(banner, sub.nextSibling);
+      }
+    } catch(e){}
+  }
+  /* ═══════════════════════════════════════════════════════════════════════
+     v52 — O CARTAO DO PACK SABE QUE JA FOI COMPRADO
+
+     O Billing consome o pack_starter, entao o Google libera a recompra; e o
+     cartao da loja mostrava "Comprar · R$ 4,99" para todo mundo, sempre. Quem
+     ja tivesse o kit podia pagar de novo e receber "ja foi resgatado nesta\nconta" — pagava e nao levava nada.
+
+     SO VALE PARA O PACK. As gemas sao consumiveis de verdade: o jogador
+     recompra de proposito, e o botao delas continua intacto.
+     ═══════════════════════════════════════════════════════════════════════ */
+  function marcarPackAdquirido(){
+    try {
+      if (!packJaResgatado()) return;
+      var btn = document.getElementById("loja-btn-pack_starter");
+      if (!btn || btn.dataset.packAdquirido === "1") return;
+      btn.dataset.packAdquirido = "1";
+      btn.textContent = "✓ Adquirido";
+      btn.disabled = true;
+      btn.removeAttribute("onclick");
+      btn.onclick = null;
+      btn.style.cssText += ";background:#2a2f36;border:1px solid #6b7480;color:#aeb6c0;" +
+                           "box-shadow:none;cursor:default;filter:none;opacity:.9";
+      var cartao = btn.closest ? btn.closest(".loja-card") : null;
+      if (cartao) {
+        var nota = cartao.querySelector(".loja-card-note");
+        if (nota) nota.textContent = "Você já é Fundador. Obrigado!";
+      }
+    } catch(e){}
+  }
+
+  var _origAbrirLoja = window.abrirLojaFragmentos;
+  if (typeof _origAbrirLoja === "function") {
+    window.abrirLojaFragmentos = function(){
+      ensureFounderCss();
+      _origAbrirLoja.apply(this, arguments);
+      decorateMural();
+      marcarPackAdquirido();
+    };
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     v48 — ENTREGA DO PACK INICIAL  (correcao do bug de nao-recebimento)
+
+     O que acontecia: a entrega escrevia em qualquer G que existisse na hora.
+     Na compra real o jogador sai do WebView para a tela do Google Play; ao
+     voltar — ou se o Android reciclar o app durante o pagamento — o jogo esta
+     na tela de titulo, SEM save carregado. Entao: os 6 itens caiam num
+     G.inventory descartavel, o ouro sumia inteiro (goldEarn precisa de
+     G.hero), o pack se marcava como resgatado, o modal agradecia pelas
+     "5.000 Moedas" e o primeiro "Carregar" sobrescrevia tudo com o save real.
+     O jogador pagava, via a tela de obrigado, e ficava sem nada.
+
+     Agora:
+       · sem jogo carregado, a compra fica PENDENTE em disco e e resgatada
+         sozinha assim que existir um heroi (inclusive em jogo novo);
+       · nada e marcado como resgatado antes de a entrega dar certo;
+       · qualquer erro remarca como pendente em vez de engolir a compra;
+       · o jogo e salvo logo apos a entrega;
+       · o modal informa o ouro como ele realmente cai (a carteira enche ate
+         nivel x 300 e o resto vai pro banco — regra do proprio goldEarn).
+     ═══════════════════════════════════════════════════════════════════════ */
+  var PACK_PEND_KEY  = "arhen_pack_starter_pendente";
+  var PACK_FEITO_KEY = "arhen_pack_starter_resgatado";
+
+  function packLer(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+  function packGravar(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
+  function packApagar(k){ try { localStorage.removeItem(k); } catch(e){} }
+
+  function packJogoPronto(){
+    return !!(window.G && G.hero && typeof G.hero.level === "number" && Array.isArray(G.inventory));
+  }
+  function packAviso(msg, tipo){
+    if (typeof blog === "function") { try { blog(msg, tipo || "ls"); } catch(e){} }
+  }
+
+  function packJaResgatado(){
+    return !!(window.G && G.founderPackRedeemed) || packLer(PACK_FEITO_KEY) === "1";
+  }
+  function packCarimbarDono(){
+    if (!window.G) return;
+    packGravar("arhen_pack_starter_dono", JSON.stringify({ slot: G.currentSlot, nome: G.heroName || null }));
+  }
+  function packDono(){
+    try { return JSON.parse(packLer("arhen_pack_starter_dono") || "null"); } catch(e){ return null; }
+  }
+
+  var _packEntregando = false;
+  function packEntregar(){
+    if (_packEntregando) return;
+    if (packJaResgatado()) { packApagar(PACK_PEND_KEY); marcarPackAdquirido(); return; }
+    _packEntregando = true;
+    try { packEntregarAgora(); } finally { _packEntregando = false; }
+  }
+  function packEntregarAgora(){
+    ensureItems();
+    ensureEpithet();
+
+    addItem("tomo_desenvolvedor", 1);
+    addItem("tomo_aventureiro", 1);
+    addItem("hp_300", 20);        /* Pocao de Vida Superior — +300 HP */
+    addItem("mp_150", 10);        /* Pocao de Mana Reforcada — +150 MP */
+    addItem("leather_vest", 1);   /* Colete de Couro — +4 DEF +10 HP */
+    addItem("selo_fundador", 1);  /* Selo do Fundador */
+
+    var ouro = goldEarn(5000) || { wallet: 0, bank: 0, total: 5000 };
+    if (typeof earnEpithet === "function") {
+      earnEpithet("patrono_arhen");
+    }
+
+    G.founderPackRedeemed = true;
+    packGravar(PACK_FEITO_KEY, "1");
+    packApagar(PACK_PEND_KEY);
+    packApagar("arhen_pack_starter_dono");
+
+    try {
+      if (typeof saveGame === "function") saveGame();
+    } catch(e) {
+      console.error("[pack-starter] erro ao salvar apos entrega:", e);
+    }
+
+    packAviso("🎁 <b>Pack Inicial resgatado!</b> Itens e ouro foram adicionados com sucesso.", "ll");
+    var st = document.getElementById("loja-frag-status");
+    if (st) st.textContent = "✅ Compra concluída!";
+    marcarPackAdquirido();
+
+    var linhaOuro = "💰 5.000 Moedas de Ouro";
+    if (ouro.bank > 0) {
+      linhaOuro += "\n(" + ouro.wallet + " na carteira e " + ouro.bank +
+                   " no 🏦 Banco — a carteira enche até nível × 300)";
+    }
+
+    setTimeout(function(){
+      if (typeof window.fecharLojaFragmentos === "function") window.fecharLojaFragmentos();
+      if (typeof showO === "function") {
+        showO("🎁 Kit de Lançamento de Crônicas de Arhen",
+          "Você recebeu:\n\n" +
+          "📜 Tomo do Desenvolvedor (leia no Objeto de Estudo do hotel)\n" +
+          "🏅 Epíteto: «Patrono de Crônicas de Arhen»\n" +
+          linhaOuro + "\n" +
+          "🧪 20 Poção de Vida Superior\n" +
+          "🔮 10 Poção de Mana Reforçada\n" +
+          "🦺 Colete de Couro (+4 DEF +10 HP)\n" +
+          "📗 Tomo do Aventureiro (use quando quiser: +25% de XP por 1 hora)\n" +
+          "✨ Selo do Fundador (colecionável permanente e único)\n\n" +
+          "Obrigado por apoiar Crônicas de Arhen desde o lançamento!",
+          [ { label: "👍 Obrigado!", cb: function(){} } ]);
+      }
+    }, 600);
+
+    if (typeof renderSidebar === "function") try { renderSidebar(); } catch(e){}
+    if (typeof renderStatusPanel === "function") try { renderStatusPanel(); } catch(e){}
+  }
+
+  /* Vigia compras pendentes caso o pagamento tenha entrado antes de abrir o save */
+  var _packVigia = null;
+  function packVigiarPendente(){
+    if (_packVigia) return;
+    _packVigia = setInterval(function(){
+      if (packLer(PACK_PEND_KEY) !== "1") {
+        clearInterval(_packVigia);
+        _packVigia = null;
+        return;
+      }
+      if (!packJogoPronto()) return;
+      clearInterval(_packVigia);
+      _packVigia = null;
+      try {
+        packAviso("🎁 Encontramos uma compra sua pendente — entregando o Pack Inicial agora.", "ll");
+        packEntregar();
+      } catch(e) {
+        console.error("[pack-starter] erro ao resgatar pendente:", e);
+      }
+    }, 1200);
+  }
+  if (packLer(PACK_PEND_KEY) === "1") packVigiarPendente();
+
+  /* Dreno das gemas */
+  (function drenarGemas(){
+    var n = parseInt(packLer("arhen_gemas_pendentes"), 10) || 0;
+    if (n <= 0) return;
+    if (typeof window.adicionarGemasNoJogo !== "function" || typeof addItem !== "function" ||
+        !packJogoPronto()) { setTimeout(drenarGemas, 1500); return; }
+    packApagar("arhen_gemas_pendentes");
+    try { window.adicionarGemasNoJogo(n); }
+    catch(e){ packGravar("arhen_gemas_pendentes", String(n)); setTimeout(drenarGemas, 2000); }
+  })();
+
+  /* PONTO DE ENTRADA DO KODULAR: adicionarpackstarternojogo() */
+  window.adicionarpackstarternojogo = function(){
+    try {
+      /* Se o jogo nao estiver aberto ainda, anota como pendente */
+      if (!packJogoPronto()) {
+        packGravar(PACK_PEND_KEY, "1");
+        packVigiarPendente();
+        var st2 = document.getElementById("loja-frag-status");
+        if (st2) st2.textContent = "✅ Compra confirmada — entra ao abrir seu jogo.";
+        if (typeof showO === "function") {
+          showO("🎁 Compra confirmada!",
+            "Seu Pack Inicial está guardado e será entregue automaticamente assim que você " +
+            "entrar no jogo.\n\nToque em Carregar (ou Novo Jogo) e o kit cai no seu inventário " +
+            "sozinho, em poucos segundos.\n\nNada se perde: a compra fica salva no aparelho até ser entregue.",
+            [ { label: "Entendi", cb: function(){} } ]);
+        }
+        return;
+      }
+      /* Jogo aberto: entrega imediatamente sem travas */
+      packEntregar();
+    } catch(err) {
+      console.error("[pack-starter] erro ao entregar o Pack Inicial:", err);
+      packGravar(PACK_PEND_KEY, "1");
+      packVigiarPendente();
+      packAviso("⏳ Tivemos uma instabilidade temporária. A compra está salva e será entregue ao reabrir o personagem.", "ls");
+    }
+  };
+
+  var PACK_RESTITUICAO = [
+    "e2ea01dfa6d2260c52c3df2f62ea01be7b4ee9e18b3c1fc996300d03e77897c6"  /* código do jogador omitido no laboratório */
+  ];
+  var PACK_REST_FEITA_KEY = "arhen_pack_starter_restituido";
+
+  /* SHA-256 em JS puro: crypto.subtle so existe em contexto seguro e a
+     WebView do App Inventor costuma rodar em file://, onde ele some. */
+  function packSha256(txt){
+    function rotr(x,n){ return (x>>>n)|(x<<(32-n)); }
+    var K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+           0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+           0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+           0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+           0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+           0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+           0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+           0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+    var H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+    var b=[],i;
+    for(i=0;i<txt.length;i++) b.push(txt.charCodeAt(i)&0xff);
+    var bits=b.length*8; b.push(0x80);
+    while(b.length%64!==56) b.push(0);
+    for(i=0;i<4;i++) b.push(0);
+    b.push((bits>>>24)&255,(bits>>>16)&255,(bits>>>8)&255,bits&255);
+    for(var off=0;off<b.length;off+=64){
+      var w=new Array(64);
+      for(i=0;i<16;i++) w[i]=(b[off+i*4]<<24)|(b[off+i*4+1]<<16)|(b[off+i*4+2]<<8)|b[off+i*4+3];
+      for(i=16;i<64;i++){
+        var s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]>>>3);
+        var s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]>>>10);
+        w[i]=(w[i-16]+s0+w[i-7]+s1)|0;
+      }
+      var a=H[0],bb=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7];
+      for(i=0;i<64;i++){
+        var S1=rotr(e,6)^rotr(e,11)^rotr(e,25);
+        var ch=(e&f)^(~e&g);
+        var t1=(h+S1+ch+K[i]+w[i])|0;
+        var S0=rotr(a,2)^rotr(a,13)^rotr(a,22);
+        var mj=(a&bb)^(a&c)^(bb&c);
+        var t2=(S0+mj)|0;
+        h=g;g=f;f=e;e=(d+t1)|0;d=c;c=bb;bb=a;a=(t1+t2)|0;
+      }
+      H[0]=(H[0]+a)|0;H[1]=(H[1]+bb)|0;H[2]=(H[2]+c)|0;H[3]=(H[3]+d)|0;
+      H[4]=(H[4]+e)|0;H[5]=(H[5]+f)|0;H[6]=(H[6]+g)|0;H[7]=(H[7]+h)|0;
+    }
+    return H.map(function(x){ return ("00000000"+(x>>>0).toString(16)).slice(-8); }).join("");
+  }
+  function packNormalizaCodigo(c){ return String(c||"").toUpperCase().replace(/[^A-Z0-9]/g,""); }
+  function packTemRestituicao(){
+    if (packLer(PACK_REST_FEITA_KEY) === "1") return false;
+    var cod = packNormalizaCodigo(packLer("arhen_cloud_save_code"));
+    if (!cod) return false;
+    return PACK_RESTITUICAO.indexOf(packSha256(cod)) !== -1;
+  }
+
+  /* O jogador escolhe o personagem — restituicao nao pode ser sorteio.
+     Como a compra antiga nao deixou carimbo de dono, nao da pra adivinhar;
+     entao a gente pergunta em vez de chutar. */
+  var _packRestVigia = null, _packRestPerguntando = false;
+  function packVigiarRestituicao(){
+    if (_packRestVigia) return;
+    _packRestVigia = setInterval(function(){
+      if (!packTemRestituicao()){ clearInterval(_packRestVigia); _packRestVigia = null; return; }
+      if (!packJogoPronto() || _packRestPerguntando) return;
+      _packRestPerguntando = true;
+      var quem = (window.G && G.heroName) || "este personagem";
+      if (window.G && G.currentSlot != null) quem += " (slot " + G.currentSlot + ")";
+      if (typeof showO !== "function"){ _packRestPerguntando = false; return; }
+      showO("🎁 Restituição do Pack Inicial",
+        "Encontramos uma compra sua que não foi entregue. Desculpe pelo transtorno.\n\n" +
+        "Em qual personagem você quer receber o kit? Agora está aberto: " + quem + ".\n\n" +
+        "Se preferir outro, toque em \"Agora não\", abra o personagem certo e o aviso " +
+        "volta a aparecer.",
+        [
+          { label: "Entregar aqui", cb: function(){
+              try {
+                clearInterval(_packRestVigia); _packRestVigia = null;
+                packApagar(PACK_FEITO_KEY);
+                if (window.G) G.founderPackRedeemed = false;
+                packEntregar();
+                packGravar(PACK_REST_FEITA_KEY, "1");
+              } catch(e){
+                console.error("[pack-starter] restituicao falhou:", e);
+                _packRestPerguntando = false;
+                packVigiarRestituicao();
+              }
+            } },
+          { label: "Agora não", cb: function(){ _packRestPerguntando = false; } }
+        ]);
+    }, 2000);
+  }
+  if (packTemRestituicao()) packVigiarRestituicao();
+
+  /* Mesa de trabalho do desenvolvedor: gera o hash de um codigo de save novo
+     sem sair do jogo, e diz se o aparelho atual tem restituicao pendente.
+     No console:  packStarterDebug.hashDe("TXZJ-GDTF-KA5W") */
+  window.packStarterDebug = {
+    hashDe: function(codigo){ return packSha256(packNormalizaCodigo(codigo)); },
+    normaliza: packNormalizaCodigo,
+    sha256: packSha256,
+    temRestituicao: packTemRestituicao,
+    meuCodigo: function(){ return packLer("arhen_cloud_save_code"); },
+    dono: packDono
+  };
+
+  /* Gancho de restituicao manual: entrega ignorando a trava de resgate.
+     Fica para o caso de precisar devolver o kit na mao. */
+  window.resgatarPackStarterManual = function(){
+    if (!packJogoPronto()) {
+      packGravar(PACK_PEND_KEY, "1");
+      packVigiarPendente();
+      packAviso("⏳ Carregue seu jogo — o Pack Inicial será entregue em seguida.", "ls");
+      return false;
+    }
+    packApagar(PACK_FEITO_KEY);
+    if (window.G) G.founderPackRedeemed = false;
+    try { packEntregar(); return true; }
+    catch(e){ console.error("[pack-starter] restituicao falhou:", e); return false; }
+  };
+
+  /* Carimba o dono no instante do Comprar — e o unico momento em que se sabe
+     com certeza qual personagem o jogador estava usando. A loja so abre de
+     dentro do jogo, entao aqui sempre ha personagem carregado. */
+  var _origComprarPacote = window.comprarPacote;
+  if (typeof _origComprarPacote === "function") {
+    window.comprarPacote = function(sku){
+      if (sku === "pack_starter") { try { packCarimbarDono(); } catch(e){} }
+      return _origComprarPacote.apply(this, arguments);
+    };
+  }
+
+  var _origUseConsumable = window.useConsumable;
+  if (typeof _origUseConsumable === "function") {
+    window.useConsumable = function(id){
+      if (id === "tomo_aventureiro") {
+        if (!window.G) return;
+        var now = Date.now();
+        var base = (G.tomoAventureiroExpiraEm && G.tomoAventureiroExpiraEm > now) ? G.tomoAventureiroExpiraEm : now;
+        G.tomoAventureiroExpiraEm = base + 60 * 60 * 1000;
+        if (typeof removeItem === "function") removeItem(id);
+        if (typeof blog === "function") blog("📗 <b>Tomo do Aventureiro!</b> +25% de experiência por 1 hora.", "ll");
+        try { updateAventureiroTimerUI(); } catch(e){}
+        if (typeof renderSidebar === "function") try { renderSidebar(); } catch(e){}
+        if (typeof renderStatusPanel === "function") try { renderStatusPanel(); } catch(e){}
+        return;
+      }
+      return _origUseConsumable.apply(this, arguments);
+    };
+  }
+
+  var _origGrantHeroXp = window.grantHeroXp;
+  if (typeof _origGrantHeroXp === "function") {
+    window.grantHeroXp = function(hero, amount){
+      try {
+        if (window.G && G.tomoAventureiroExpiraEm && Date.now() < G.tomoAventureiroExpiraEm) {
+          amount = Math.round((Number(amount) || 0) * 1.25);
+        }
+      } catch(e){}
+      return _origGrantHeroXp.call(this, hero, amount);
+    };
+  }
+
+  function updateAventureiroTimerUI(){
+    try {
+      var header = document.querySelector("#side-status .side-card-header");
+      if (!header) return;
+      var timerEl = document.getElementById("tomo-aventureiro-timer");
+      var active = window.G && G.tomoAventureiroExpiraEm && Date.now() < G.tomoAventureiroExpiraEm;
+      if (!active) {
+        if (timerEl) timerEl.remove();
+        if (window.G && G.tomoAventureiroExpiraEm && Date.now() >= G.tomoAventureiroExpiraEm) {
+          G.tomoAventureiroExpiraEm = null;
+          if (typeof blog === "function") blog("📗 O efeito do Tomo do Aventureiro (+25% XP) terminou.", "ls");
+        }
+        return;
+      }
+      var msLeft = G.tomoAventureiroExpiraEm - Date.now();
+      var totalSec = Math.max(0, Math.floor(msLeft / 1000));
+      var mm = Math.floor(totalSec / 60);
+      var ss = totalSec % 60;
+      var txt = "⏳ +25% XP " + mm + ":" + (ss < 10 ? "0" : "") + ss;
+      if (!timerEl) {
+        timerEl = document.createElement("span");
+        timerEl.id = "tomo-aventureiro-timer";
+        timerEl.style.cssText = "margin-left:6px;font-size:9px;font-weight:bold;color:#ffd080;background:#3a1e00;border:1px solid #ffb060;border-radius:10px;padding:1px 6px;vertical-align:middle";
+        var arrowSpan = header.querySelector("span");
+        if (arrowSpan) header.insertBefore(timerEl, arrowSpan); else header.appendChild(timerEl);
+      }
+      timerEl.textContent = txt;
+    } catch(e){}
+  }
+  window.updateAventureiroTimerUI = updateAventureiroTimerUI;
+  setInterval(updateAventureiroTimerUI, 1000);
+  updateAventureiroTimerUI();
+
+})();
+
+/* ──────────────────────────────────────────────────────────────────────
+   4. PRODUTO · Anjo da Guarda
+      Mora no script próprio script#anjo-da-guarda-js, no fim da
+      página. SKU pack_angel · Kodular chama adicionarpackangelnojogo();
+   ────────────────────────────────────────────────────────────────────── */
+
+/* ════════════════════════════════════════════════════════════════════════
+   MÓDULO LOJA — Mural de Compras  ·  FIM
+   ════════════════════════════════════════════════════════════════════════ */
+</script>
+<!-- ════════════════════════════════════════════════════════════════════════
+     FIM DO MÓDULO LOJA
+     ════════════════════════════════════════════════════════════════════════ -->
 <script id="anjo-da-guarda-js">
 window.ANJO_IMG_BASE = "";   /* laboratório: imagens na mesma pasta */
-window.ANJO_LIBERADO = true;  /* laboratório: sem compra */
+window.ANJO_LIBERADO = false; /* true = anjo liberado sem compra (testes só gráficos) */
 /* ════════════════════════════════════════════════════════════════════════
    ANJO DA GUARDA — script próprio (cosmético pago)
 
@@ -5585,6 +6632,8 @@ function createDungeonRoom(opts){
     ehParede:(r,c) => ch(r,c) === "#",
     lighting:() => lighting, syncLight
   }) : null;
+  /* laboratório: botão roxo "Comprar" solto na tela da dungeon (script loja-laboratorio-js) */
+  if(window.LojaLab) LojaLab.montar(cfg.mount, ac.signal);
   let raf = requestAnimationFrame(function loop(now){ raf = requestAnimationFrame(loop); drawHero(now); if(anjo) anjo.tick(now); syncLight(); if(anjo) anjo.mask(); });
 
   /* ---------- monstros ---------- */
