@@ -9,9 +9,8 @@
    │ 3. Não guarde notas antigas aqui. O histórico dos jogadores já fica    │
    │    salvo no aparelho de cada um (localStorage "arhen_notas_log"),      │
    │    acumulando a cada nota que eles recebem.                            │
-   │ 4. Produto novo na loja? Troque NOVIDADE_LOJA pelo SKU dele para a     │
-   │    bolinha voltar a aparecer no botão roxo "Comprar". Sem novidade,    │
-   │    deixe "".                                                           │
+   │ 4. Produto novo na loja? A bolinha do botão "Comprar" é do módulo da   │
+   │    loja (script loja-js): troque lá o NOVIDADE pelo SKU do produto.    │
    └────────────────────────────────────────────────────────────────────────┘
    ════════════════════════════════════════════════════════════════════════ */
 (function(){
@@ -28,11 +27,9 @@
       "✉️ Esta cartinha é nova: toda atualização do jogo passa a ser anunciada aqui, e o histórico fica guardado para você reler."
     ]
   };
-  var NOVIDADE_LOJA = "pack_angel";
 
   var KEY_LOG = "arhen_notas_log";
   var KEY_VISTA = "arhen_notas_vista";
-  var KEY_LOJA = "arhen_loja_novidade_vista";
 
   function ler(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
   function gravar(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
@@ -58,7 +55,8 @@
     "#notas-btn{position:absolute;left:8px;top:6px;z-index:50;background:transparent;border:none;padding:4px 6px;font-size:20px;line-height:1;cursor:pointer;filter:drop-shadow(0 0 6px rgba(255,208,128,.45));transition:transform .12s ease}" +
     "#notas-btn:hover{transform:scale(1.12) rotate(-6deg)}" +
     "#notas-btn .notif-dot{top:0;right:0}" +
-    "#notas-modal{position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;padding:16px;background:radial-gradient(ellipse at 50% 30%,rgba(60,30,8,.55),rgba(0,0,0,.9));animation:lojaFadeIn .2s ease-out}" +
+    "#notas-modal{position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;padding:16px;background:radial-gradient(ellipse at 50% 30%,rgba(60,30,8,.55),rgba(0,0,0,.9));animation:notasFadeIn .2s ease-out}" +
+    "@keyframes notasFadeIn{from{opacity:0}to{opacity:1}}" +
     "#notas-box{position:relative;background:linear-gradient(160deg,#241108,#0d0500);border:2px solid #c9a35a;border-radius:16px;max-width:520px;width:100%;max-height:86vh;overflow:auto;padding:18px 18px 14px;color:#f0e0c0;font-family:Georgia,serif;box-shadow:0 30px 80px rgba(0,0,0,.7),0 0 0 4px rgba(201,163,90,.10) inset}" +
     "#notas-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}" +
     "#notas-title{font-size:17px;color:#ffd080;font-weight:bold;text-shadow:0 0 10px rgba(255,208,128,.35)}" +
@@ -73,10 +71,7 @@
     ".nota ul{margin:0;padding-left:16px}" +
     ".nota li{font-size:11.5px;line-height:1.5;color:#e8d4ae;margin-bottom:4px}" +
     ".nota--antiga .nota-titulo{color:#d9b880}" +
-    ".nota--antiga li{color:#bfa880}" +
-    /* bolinha maciça: fica FORA do botão (ele corta o que passa da borda) e sobra no canto */
-    ".loja-nova-dot{position:absolute;z-index:5;width:13px;height:13px;border-radius:50%;pointer-events:none;background:#e31b1b;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.65);animation:lojaDotPulse 1.25s ease-in-out infinite}" +
-    "@keyframes lojaDotPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}";
+    ".nota--antiga li{color:#bfa880}";
   function garantirCss(){
     if (document.getElementById("notas-css")) return;
     var s = document.createElement("style"); s.id = "notas-css"; s.textContent = CSS;
@@ -135,57 +130,10 @@
   window.abrirNotasAtualizacao = abrirNotas;
   document.addEventListener("keydown", function(e){ if (e.key === "Escape") fecharNotas(); });
 
-  /* ── bolinha no botão roxo "Comprar" enquanto houver novidade não vista ── */
-  function lojaNova(){ return !!NOVIDADE_LOJA && ler(KEY_LOJA) !== NOVIDADE_LOJA; }
-  function pintarLoja(){
-    var nova = lojaNova();
-    Array.prototype.forEach.call(document.querySelectorAll(".loja-nova-dot"), function(dot){
-      if (!nova || !dot._btn || !dot._btn.isConnected) dot.remove();
-    });
-    if (!nova) return;
-    Array.prototype.forEach.call(document.querySelectorAll(".frag-buy-btn"), function(btn){
-      var pai = btn.parentNode;
-      if (!pai || btn.offsetParent === null) return;
-      var dot = btn._lojaDot;
-      if (!dot || !dot.isConnected) {
-        if (getComputedStyle(pai).position === "static") pai.style.position = "relative";
-        dot = document.createElement("span"); dot.className = "loja-nova-dot"; dot._btn = btn;
-        pai.appendChild(dot); btn._lojaDot = dot;
-      }
-      /* canto superior direito do botão, sobrando um pouco para fora */
-      dot.style.left = (btn.offsetLeft + btn.offsetWidth - 11) + "px";
-      dot.style.top = (btn.offsetTop - 4) + "px";
-    });
-  }
-  window.addEventListener("resize", function(){ pintarLoja(); });
-  function lojaVista(){
-    if (!lojaNova()) return;
-    gravar(KEY_LOJA, NOVIDADE_LOJA);
-    pintarLoja();
-  }
-  var _abrirLoja = window.abrirLojaFragmentos;
-  if (typeof _abrirLoja === "function") {
-    window.abrirLojaFragmentos = function(){
-      var r = _abrirLoja.apply(this, arguments);
-      lojaVista();
-      return r;
-    };
-  }
-  /* o botão "Comprar" é recriado a cada renderSidebar; repinta depois de cada um */
-  var _side = window.renderSidebar;
-  if (typeof _side === "function") {
-    window.renderSidebar = function(){
-      var r = _side.apply(this, arguments);
-      try { pintarLoja(); } catch(e){}
-      return r;
-    };
-  }
-
   function iniciar(){
     garantirCss();
     montarCartinha();
-    pintarLoja();
-    setInterval(function(){ montarCartinha(); pintarLoja(); }, 1500);
+    setInterval(montarCartinha, 1500);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar, { once:true });
   else iniciar();

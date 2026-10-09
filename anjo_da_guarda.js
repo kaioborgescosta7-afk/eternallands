@@ -5,6 +5,7 @@
      1. CSS (masmorra + vitrine da loja)
      2. Posse da compra (Google Play via Kodular, SKU "anjo_da_guarda")
      3. Cartão no Mural de Compras: vitrine girando com as 4 poses + glow
+        (o produto entra pela API do módulo da loja: Loja.registrarProduto)
      4. O anjo na masmorra: invocação, pouso, luz, partida
 
    Produto no Google Play: "pack_angel" (o mesmo texto que a loja manda ao
@@ -190,12 +191,15 @@
     badge: "NOVO · ITEM PERMANENTE",
     note: "Invoque e dispense quando quiser, em todas as masmorras."
   };
-  function garantirProduto(){
-    if (!window.LOJA_PRODUTOS) { setTimeout(garantirProduto, 250); return; }
-    var ja = window.LOJA_PRODUTOS.some(function(p){ return p.sku === SKU; });
-    if (!ja) window.LOJA_PRODUTOS.unshift(PRODUTO);
+  /* o produto entra pelo módulo da loja (script loja-js); sem loja (laboratório), nada a fazer */
+  var tentativasLoja = 0;
+  function registrarNaLoja(){
+    if (window.Loja && typeof window.Loja.registrarProduto === "function") {
+      window.Loja.registrarProduto(PRODUTO, { decorar: decorarCartao });
+      return;
+    }
+    if (++tentativasLoja < 40) setTimeout(registrarNaLoja, 250);
   }
-  garantirProduto();
 
   var preload = [];
   function preCarregar(){
@@ -235,9 +239,7 @@
     if (nota) nota.textContent = "O Anjo já te acompanha. Toque em ✧ nas masmorras.";
   }
 
-  function decorarCartao(){
-    var btn = document.getElementById("loja-btn-" + SKU);
-    var cartao = btn && btn.closest ? btn.closest(".loja-card") : null;
+  function decorarCartao(cartao){
     if (!cartao || cartao.dataset.anjo === "1") return;
     cartao.dataset.anjo = "1";
     preCarregar();
@@ -274,15 +276,7 @@
     marcarAdquirido();
   }
 
-  /* o Mural é montado por outros scripts (e embrulhado por mais de um patch);
-     em vez de embrulhar a função, o anjo observa quando o modal aparece */
-  function observarMural(){
-    if (!document.body) { document.addEventListener("DOMContentLoaded", observarMural, { once:true }); return; }
-    new MutationObserver(function(){
-      if (document.getElementById("loja-frag-modal")) decorarCartao();
-    }).observe(document.body, { childList:true });
-  }
-  observarMural();
+  registrarNaLoja();
 
   /* ───────────────────────── 4. Masmorra ───────────────────────── */
   var ANGEL_SPEED = 2.6, ANGEL_LIGHT = 3;
