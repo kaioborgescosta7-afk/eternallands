@@ -371,7 +371,8 @@
      1. NÚCLEO ......... catálogo (LOJA_PRODUTOS), modal do Mural, botão de
                          compra (comprarPacote → Kodular) e entrega das gemas
                          (adicionarGemasNoJogo)
-     2. API ............ Loja.registrarProduto / Loja.aoAbrir e a bolinha
+     2. API ............ OFERTAS (ativa/inativa, prazo e cronômetro),
+                         Loja.registrarProduto / Loja.aoAbrir e a bolinha
                          de NOVIDADE no botão roxo "Comprar"
      3. PRODUTO ........ Pack Inicial (Kit de Lançamento) — entrega,
                          restituição e Tomo do Aventureiro
@@ -507,7 +508,9 @@
     ensureLojaCss();
     var old = document.getElementById("loja-frag-modal");
     if (old) old.remove();
-    var itemsHtml = LOJA_PRODUTOS.map(function(entry) {
+    var itemsHtml = LOJA_PRODUTOS.filter(function(entry) {
+      return !window.Loja || window.Loja.ofertaAtiva(entry.sku);   /* OFERTAS, seção 2 */
+    }).map(function(entry) {
       var ribbon = entry.badge ? '<div class="loja-card-badge-ribbon">' + entry.badge + "</div>" : "";
       return '<div class="loja-card loja-card--' + entry.tier + '">' +
         ribbon +
@@ -541,6 +544,10 @@
     var statusEl = document.getElementById("loja-frag-status");
     if (!produto) {
       if (statusEl) statusEl.textContent = "⚠️ Produto não encontrado.";
+      return;
+    }
+    if (window.Loja && !window.Loja.ofertaAtiva(sku)) {
+      if (statusEl) statusEl.textContent = "⌛ Esta oferta não está mais disponível.";
       return;
     }
     try {
@@ -589,9 +596,50 @@
    NOVIDADE: troque Loja.NOVIDADE pelo SKU do produto mais novo para a
    bolinha vermelha voltar no botão "Comprar" de todos os jogadores. Ela
    some quando o jogador abre o Mural. Sem novidade, deixe "".
+
+   OFERTAS: liga e desliga produtos do Mural, sem nada aparecer na tela.
    ────────────────────────────────────────────────────────────────────── */
 (function(){
   "use strict";
+
+  /* ╔══ OFERTAS ══════════════════════════════════════════════════════════╗
+     ║ Uma linha por SKU. Produto que não estiver aqui fica sempre ativo.  ║
+     ║                                                                     ║
+     ║   ativa: true/false  → false tira o produto do Mural na hora (ele   ║
+     ║                        some sem aviso; para criar escassez)          ║
+     ║   de:  "AAAA-MM-DDTHH:MM"  → (opcional) só aparece a partir daí     ║
+     ║   ate: "AAAA-MM-DDTHH:MM"  → (opcional) some sozinho nesse momento, ║
+     ║                        e o cartão mostra o cronômetro regressivo    ║
+     ║                                                                     ║
+     ║ Horários no fuso de Brasília (o -03:00 no fim). O relógio usado é   ║
+     ║ o do aparelho do jogador.                                           ║
+     ║ Quem já comprou continua com o item: isto só controla a VENDA.      ║
+     ╚═════════════════════════════════════════════════════════════════════╝ */
+  var OFERTAS = {
+    pack_angel:     { ativa: true, ate: "2026-10-31T23:59:00-03:00" },
+    pack_starter:   { ativa: true },
+    pack_10_gems:   { ativa: true },
+    pack_100_gems:  { ativa: true },
+    pack_1000_gems: { ativa: true }
+  };
+
+  function quando(txt){ var t = txt ? Date.parse(txt) : NaN; return isNaN(t) ? null : t; }
+  /* a oferta está à venda agora? */
+  function ofertaAtiva(sku){
+    var o = OFERTAS[sku];
+    if (!o) return true;
+    if (o.ativa === false) return false;
+    var agora = Date.now(), de = quando(o.de), ate = quando(o.ate);
+    if (de !== null && agora < de) return false;
+    if (ate !== null && agora >= ate) return false;
+    return true;
+  }
+  /* milissegundos até a oferta acabar (null = sem prazo) */
+  function restante(sku){
+    var o = OFERTAS[sku], ate = o && quando(o.ate);
+    return ate ? Math.max(0, ate - Date.now()) : null;
+  }
+
   var NOVIDADE = "pack_angel";
   var KEY_NOVIDADE = "arhen_loja_novidade_vista";
 
@@ -617,7 +665,64 @@
       if (cartao) { try { decoradores[sku](cartao); } catch(e){ console.error("[loja] decorar " + sku, e); } }
     });
     aoAbrir.forEach(function(fn){ try { fn(); } catch(e){ console.error("[loja] aoAbrir", e); } });
+    montarCronometros();
     novidadeVista();
+  }
+
+  /* ── cronômetro regressivo no cartão das ofertas com prazo ── */
+  var CSS_CRONO = "" +
+    ".loja-crono{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin:2px 0 8px;padding:5px 8px;border-radius:8px;border:1px solid rgba(255,90,70,.55);background:linear-gradient(90deg,rgba(120,10,10,.55),rgba(60,0,0,.35));font:bold 10px/1.2 Georgia,serif;letter-spacing:.3px;color:#ffd0c0;text-transform:uppercase}" +
+    ".loja-crono b{font:bold 13px/1 'Courier New',monospace;letter-spacing:.5px;color:#fff;text-shadow:0 0 8px rgba(255,80,60,.8);text-transform:none}" +
+    ".loja-crono.urgente{animation:lojaCronoPulso 1s ease-in-out infinite}" +
+    "@keyframes lojaCronoPulso{50%{border-color:#ff6040;box-shadow:0 0 12px rgba(255,70,40,.55)}}" +
+    ".loja-crono.encerrada{border-color:#6b6b6b;background:rgba(40,40,40,.6);color:#bbb;animation:none}";
+  function dois(n){ return (n < 10 ? "0" : "") + n; }
+  function formatar(ms){
+    var t = Math.floor(ms / 1000), d = Math.floor(t / 86400), h = Math.floor(t % 86400 / 3600),
+        m = Math.floor(t % 3600 / 60), sg = t % 60;
+    return (d > 0 ? d + "d " : "") + dois(h) + ":" + dois(m) + ":" + dois(sg);
+  }
+  var cronoTimer = null;
+  function montarCronometros(){
+    if (!document.getElementById("loja-crono-css")) {
+      var st = document.createElement("style"); st.id = "loja-crono-css"; st.textContent = CSS_CRONO;
+      (document.head || document.documentElement).appendChild(st);
+    }
+    var cronos = [];
+    Object.keys(OFERTAS).forEach(function(sku){
+      if (restante(sku) === null) return;
+      var btn = document.getElementById("loja-btn-" + sku);
+      if (!btn || !btn.parentNode) return;
+      var el = btn.parentNode.querySelector(".loja-crono");
+      if (btn.disabled) { if (el) el.remove(); return; }   /* já comprou: sem cronômetro */
+      if (!el) {
+        el = document.createElement("div"); el.className = "loja-crono";
+        btn.parentNode.insertBefore(el, btn);
+      }
+      cronos.push({ sku: sku, el: el, btn: btn });
+    });
+    clearInterval(cronoTimer);
+    if (!cronos.length) return;
+    function tique(){
+      if (!document.getElementById("loja-frag-modal")) { clearInterval(cronoTimer); return; }
+      cronos.forEach(function(c){
+        var ms = restante(c.sku);
+        if (ms > 0) {
+          c.el.innerHTML = "⏳ Oferta termina em <b>" + formatar(ms) + "</b>";
+          c.el.classList.toggle("urgente", ms < 24 * 3600 * 1000);
+        } else if (!c.el.classList.contains("encerrada")) {
+          c.el.classList.add("encerrada"); c.el.classList.remove("urgente");
+          c.el.textContent = "⌛ Oferta encerrada";
+          if (!c.btn.disabled) {
+            c.btn.disabled = true; c.btn.removeAttribute("onclick"); c.btn.onclick = null;
+            c.btn.textContent = "Indisponível";
+            c.btn.style.cssText += ";filter:grayscale(1);opacity:.6;cursor:default;animation:none";
+          }
+        }
+      });
+    }
+    tique();
+    cronoTimer = setInterval(tique, 1000);
   }
   var _abrir = window.abrirLojaFragmentos;
   window.abrirLojaFragmentos = function(){
@@ -636,7 +741,7 @@
     var s = document.createElement("style"); s.id = "loja-novidade-css"; s.textContent = CSS;
     (document.head || document.documentElement).appendChild(s);
   }
-  function temNovidade(){ return !!NOVIDADE && ler(KEY_NOVIDADE) !== NOVIDADE; }
+  function temNovidade(){ return !!NOVIDADE && ofertaAtiva(NOVIDADE) && ler(KEY_NOVIDADE) !== NOVIDADE; }
   function pintarNovidade(){
     var nova = temNovidade();
     Array.prototype.forEach.call(document.querySelectorAll(".loja-nova-dot"), function(dot){
@@ -691,7 +796,9 @@
     aoAbrir: function(fn){ if (typeof fn === "function") aoAbrir.push(fn); },
     abrir: function(){ return window.abrirLojaFragmentos(); },
     fechar: function(){ return window.fecharLojaFragmentos(); },
-    pintarNovidade: pintarNovidade
+    pintarNovidade: pintarNovidade,
+    ofertaAtiva: ofertaAtiva,
+    restante: restante
   };
 })();
 
