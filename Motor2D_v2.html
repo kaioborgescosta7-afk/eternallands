@@ -3757,12 +3757,30 @@ function generateLevel(){
 /* ── Anjo da Guarda (cosmético) ── */
 .dg-angel-btn{position:absolute;top:40px;right:8px;z-index:70;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,240,200,.55);background:radial-gradient(circle,rgba(255,250,230,.25),rgba(20,18,30,.85));color:#fff6d8;font:700 18px/1 serif;cursor:pointer;box-shadow:0 0 12px rgba(255,235,170,.45)}
 .dg-angel-btn.on{box-shadow:0 0 18px rgba(255,245,200,.95);background:radial-gradient(circle,rgba(255,250,230,.6),rgba(60,50,30,.85))}
-.dg-angel{position:absolute;left:0;top:0;z-index:900;pointer-events:none;will-change:transform}
-.dg-angel i{position:absolute;left:50%;bottom:0;transform:translateX(-50%);background:center bottom/contain no-repeat;filter:drop-shadow(0 0 6px rgba(255,248,215,.85));animation:dg-angel-hover 1.6s ease-in-out infinite alternate}
-.dg-angel::before{content:"";position:absolute;left:50%;bottom:-6%;width:70%;height:18%;transform:translateX(-50%);border-radius:50%;background:radial-gradient(rgba(0,0,0,.35),transparent 70%)}
-@keyframes dg-angel-hover{from{margin-bottom:0}to{margin-bottom:6px}}
-.dg-angel-beam{position:absolute;top:0;z-index:899;pointer-events:none;transform:translateX(-50%);background:linear-gradient(to bottom,rgba(255,255,255,.0),rgba(255,255,255,.75) 30%,rgba(255,250,225,.9));filter:blur(3px);box-shadow:0 0 40px 14px rgba(255,250,225,.55);transition:opacity .7s;animation:dg-beam-pulse .35s ease-in-out infinite alternate}
-@keyframes dg-beam-pulse{from{opacity:.75}to{opacity:1}}
+.dg-angel{position:absolute;left:0;top:0;z-index:900;pointer-events:none;will-change:transform,opacity}
+.dg-angel i{position:absolute;left:50%;bottom:0;transform:translateX(-50%);transform-origin:50% 100%;background:center bottom/contain no-repeat;filter:drop-shadow(0 0 6px rgba(255,248,215,.85));animation:dg-angel-hover 1.6s ease-in-out infinite alternate;will-change:filter,scale}
+@keyframes dg-angel-hover{from{translate:0 0}to{translate:0 -6px}}
+/* sombra presa ao chão: encolhe e clareia conforme o anjo sobe */
+.dg-angel-shadow{position:absolute;left:0;top:0;z-index:897;pointer-events:none;border-radius:50%;background:radial-gradient(rgba(0,0,0,.38),transparent 70%);will-change:transform,opacity}
+/* círculo de luz no ponto de pouso/partida */
+.dg-angel-pool{position:absolute;left:0;top:0;z-index:897;pointer-events:none;border-radius:50%;opacity:0;background:radial-gradient(ellipse,rgba(255,252,230,.95),rgba(255,222,140,.4) 42%,transparent 70%);mix-blend-mode:screen;will-change:transform,opacity}
+/* feixe: abre (largura), pulsa (::after) e fecha */
+.dg-angel-beam{position:absolute;top:0;z-index:899;pointer-events:none;transform:translateX(-50%);transform-origin:50% 0;background:linear-gradient(to bottom,rgba(255,255,255,.0),rgba(255,255,255,.75) 30%,rgba(255,250,225,.9));filter:blur(3px);box-shadow:0 0 40px 14px rgba(255,250,225,.55);animation:dg-beam-open .5s cubic-bezier(.2,.9,.3,1) both}
+.dg-angel-beam.up{transform-origin:50% 100%}
+.dg-angel-beam::after{content:"";position:absolute;inset:0;background:inherit;opacity:.35;animation:dg-beam-pulse 1.1s ease-in-out infinite alternate}
+.dg-angel-beam.closing{animation:dg-beam-close .7s ease-in forwards}
+@keyframes dg-beam-pulse{from{opacity:.15}to{opacity:.6}}
+@keyframes dg-beam-open{from{transform:translateX(-50%) scale(.04,0);opacity:0}55%{transform:translateX(-50%) scale(1.25,1);opacity:1}to{transform:translateX(-50%) scale(1,1);opacity:1}}
+@keyframes dg-beam-close{from{transform:translateX(-50%) scaleX(1);opacity:1}35%{transform:translateX(-50%) scaleX(.08);opacity:1}to{transform:translateX(-50%) scaleX(0);opacity:0}}
+/* onda de choque do pouso */
+.dg-angel-ring{position:absolute;z-index:898;pointer-events:none;border-radius:50%;border:2px solid rgba(255,246,205,.95);box-shadow:0 0 14px 3px rgba(255,232,160,.7),inset 0 0 10px rgba(255,240,190,.6);transform:translate(-50%,-50%) scale(.1);animation:dg-angel-ring .65s cubic-bezier(.15,.8,.3,1) forwards}
+@keyframes dg-angel-ring{60%{opacity:.9}to{transform:translate(-50%,-50%) scale(1);opacity:0}}
+/* faíscas e penas de luz */
+.dg-spark{position:absolute;z-index:901;width:4px;height:4px;margin:-2px 0 0 -2px;border-radius:50%;pointer-events:none;background:#fffbe6;box-shadow:0 0 6px 2px rgba(255,235,170,.9);animation:dg-spark var(--t) ease-out forwards}
+@keyframes dg-spark{to{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
+.dg-feather{position:absolute;z-index:901;width:5px;height:11px;margin:-5px 0 0 -2px;pointer-events:none;border-radius:50% 50% 50% 50%/70% 70% 30% 30%;background:linear-gradient(#fff,#fff3cf);box-shadow:0 0 6px 1px rgba(255,240,190,.8);animation:dg-feather var(--t) linear forwards}
+@keyframes dg-feather{0%{transform:translate(0,0) rotate(-25deg);opacity:0}10%{opacity:1}25%{transform:translate(var(--sw),calc(var(--fall)*.25)) rotate(25deg)}50%{transform:translate(0,calc(var(--fall)*.5)) rotate(-25deg)}75%{transform:translate(var(--sw),calc(var(--fall)*.75)) rotate(25deg);opacity:.8}100%{transform:translate(0,var(--fall)) rotate(-15deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){.dg-angel i,.dg-angel-beam::after{animation:none}.dg-spark,.dg-feather,.dg-angel-ring{display:none}}
 .dg-hud{position:absolute;top:8px;left:8px;right:8px;z-index:60;display:flex;gap:6px;flex-wrap:wrap;pointer-events:none;font:600 11px var(--font-data)}
 .dg-badge{background:rgba(10,12,14,.84);border:1px solid rgba(255,208,131,.3);color:#f3dfb4;border-radius:99px;padding:3px 9px;display:inline-flex;align-items:center;gap:4px}
 .dg-badge.dg-keyb{border-color:#e7b54a;color:#ffd47a;box-shadow:0 0 10px rgba(231,181,74,.4)}
@@ -4983,8 +5001,13 @@ function createDungeonRoom(opts){
   /* ---------- Anjo da Guarda: 100% cosmético, só ilumina ---------- */
   const ANGEL_SPR = {};
   ["back","front","left","right"].forEach(d => (d === "left" || d === "right" ? ["_pose"] : ["_pose","1","2"]).forEach(f => { const im = new Image(); im.src = "angel_" + d + f + ".png"; ANGEL_SPR[d + f] = im; }));
-  const angel = { on:false, el:null, img:null, beam:null, x:0, y:0, tr:0, tc:0, state:"off", t0:0, wait:0, dir:"front", moving:false, lastP:"", dismissAfterArrival:false };
+  const angel = { on:false, el:null, img:null, beam:null, shadow:null, pool:null, x:0, y:0, tr:0, tc:0, state:"off", t0:0, wait:0, dir:"front", moving:false, lastP:"", dismissAfterArrival:false,
+    lightK:0, landT:0, fadeInT:0, fxT:0, opacity:1 };
   const ANGEL_SPEED = 2.6, ANGEL_LIGHT = 3;
+  const ANGEL_OPEN = 450, ANGEL_FALL = 1800;            /* invocação: céu abre, depois desce */
+  const ANGEL_CHARGE = 450, ANGEL_CROUCH = 140, ANGEL_RISE = 1800; /* partida: carrega, agacha, sobe */
+  const angelCalm = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
   function angelFree(r, c){
     if(ch(r,c) === "#" || !eng.passable(r,c)) return false;
     const p = eng.player; return !(p && p.r === r && p.c === c);
@@ -5002,20 +5025,51 @@ function createDungeonRoom(opts){
     if(!angel.el){
       angel.el = document.createElement("div"); angel.el.className = "dg-angel";
       angel.img = document.createElement("i"); angel.el.appendChild(angel.img);
+      angel.shadow = document.createElement("div"); angel.shadow.className = "dg-angel-shadow";
+      angel.pool = document.createElement("div"); angel.pool.className = "dg-angel-pool";
     }
-    if(angel.el.parentNode !== eng.board) eng.board.appendChild(angel.el);
+    if(angel.el.parentNode !== eng.board){
+      eng.board.appendChild(angel.shadow); eng.board.appendChild(angel.pool); eng.board.appendChild(angel.el);
+    }
   }
-  function angelBeam(){
+  function angelBeam(up){
     if(angel.beam) angel.beam.remove();
     const cell = eng.cell;
     angel.y0 = -eng.board.getBoundingClientRect().top - cell * 2;
-    angel.beam = document.createElement("div"); angel.beam.className = "dg-angel-beam";
+    angel.beam = document.createElement("div"); angel.beam.className = "dg-angel-beam" + (up ? " up" : "");
     angel.beam.style.left = (angel.tc * cell + cell / 2) + "px"; angel.beam.style.width = (cell * .9) + "px";
     angel.beam.style.top = angel.y0 + "px"; angel.beam.style.height = ((angel.tr + 1) * cell - angel.y0) + "px";
     eng.board.appendChild(angel.beam);
   }
   function angelFadeBeam(){
-    const b = angel.beam; if(b){ b.style.opacity = "0"; setTimeout(() => b.remove(), 750); angel.beam = null; }
+    const b = angel.beam; if(!b) return;
+    angel.beam = null;
+    b.classList.add("closing");
+    b.addEventListener("animationend", e => { if(e.animationName === "dg-beam-close") b.remove(); });
+    setTimeout(() => b.remove(), 900); /* garantia caso a animação não dispare */
+  }
+  /* efeitos descartáveis: somem sozinhos ao fim da animação */
+  function angelFx(cls, x, y, css){
+    if(angelCalm || !eng.board) return;
+    const n = document.createElement("b"); n.className = cls;
+    n.style.cssText = "left:" + x + "px;top:" + y + "px;" + (css || "");
+    n.addEventListener("animationend", () => n.remove(), { once:true });
+    eng.board.appendChild(n);
+  }
+  function angelBurst(x, y, n, up){
+    for(let i = 0; i < n; i++){
+      const a = (up ? -Math.PI / 2 : 0) + (Math.random() - .5) * (up ? 2 : Math.PI * 2);
+      const d = eng.cell * (.6 + Math.random() * 1.2);
+      angelFx("dg-spark", x, y, "--dx:" + (Math.cos(a) * d).toFixed(1) + "px;--dy:" + (Math.sin(a) * d).toFixed(1) + "px;--t:" + (.6 + Math.random() * .6).toFixed(2) + "s");
+    }
+  }
+  function angelRing(x, y){
+    const w = eng.cell * 3.2;
+    angelFx("dg-angel-ring", x, y, "width:" + w + "px;height:" + (w * .42) + "px");
+  }
+  function angelFeather(x, y){
+    const c = eng.cell;
+    angelFx("dg-feather", x + (Math.random() - .5) * c * .6, y, "--fall:" + (c * (1.2 + Math.random())).toFixed(1) + "px;--sw:" + ((Math.random() < .5 ? -1 : 1) * c * (.2 + Math.random() * .25)).toFixed(1) + "px;--t:" + (1.4 + Math.random() * .9).toFixed(2) + "s");
   }
   function angelSummon(){
     if(!eng.player || !eng.board) return;
@@ -5024,14 +5078,15 @@ function createDungeonRoom(opts){
     const cell = eng.cell;
     angel.on = true; angel.state = "descend"; angel.t0 = performance.now(); angel.dismissAfterArrival = false;
     angel.tr = t[0]; angel.tc = t[1]; angel.dir = "front"; angel.moving = false;
-    angel.x = t[1] * cell + cell / 2;
-    angelBeam();
+    angel.x = t[1] * cell + cell / 2; angel.lightK = 0; angel.landT = 0; angel.fadeInT = 0; angel.opacity = 1;
+    angelBeam(false);
     angel.y = angel.y0;
     if(angelBtn) angelBtn.classList.add("on");
   }
   function angelRemove(){
-    angel.on = false; angel.state = "off"; angel.dismissAfterArrival = false;
-    if(angel.el) angel.el.remove(); if(angel.beam) angel.beam.remove(); angel.beam = null;
+    angel.on = false; angel.state = "off"; angel.dismissAfterArrival = false; angel.lightK = 0;
+    if(angel.el){ angel.el.remove(); angel.shadow.remove(); angel.pool.remove(); }
+    if(angel.beam) angel.beam.remove(); angel.beam = null;
     if(angelBtn) angelBtn.classList.remove("on");
     syncLight(true);
   }
@@ -5042,7 +5097,7 @@ function createDungeonRoom(opts){
     const t = angelPick(2, 2) || angelPick(1, 3);
     if(!t) return;
     angel.tr = t[0]; angel.tc = t[1]; angel.state = "return"; angel.moving = false;
-    angelBeam();
+    if(angelBtn) angelBtn.classList.remove("on");
   }
   function angelToggle(){ angel.on ? angelDismiss() : angelSummon(); }
   let angelBtn = null;
@@ -5058,26 +5113,55 @@ function createDungeonRoom(opts){
     const dt = Math.min(.05, (now - (angelLast || now)) / 1000); angelLast = now;
     if(!angel.on || !eng.player || !eng.board) return;
     const cell = eng.cell;
-    if(angel.el.parentNode !== eng.board){ /* novo andar: reaparece perto do herói */
+    if(angel.el.parentNode !== eng.board){ /* novo andar: reaparece perto do herói num lampejo */
       if(angel.state === "return" || angel.state === "ascend" || angel.dismissAfterArrival){ angelRemove(); return; }
       angelMount(); const t = angelPick(2, 3) || angelPick(1, 4);
       if(t){ angel.tr = t[0]; angel.tc = t[1]; angel.x = t[1]*cell + cell/2; angel.y = (t[0]+1)*cell - cell*.1; }
       if(angel.beam){ angel.beam.remove(); angel.beam = null; }
-      angel.state = "wait"; angel.wait = now + 2000;
+      angel.state = "wait"; angel.wait = now + 2000; angel.fadeInT = now; angel.lightK = 0;
+      angelBurst(angel.x, angel.y - cell * .6, 10, false);
     }
     const tx = angel.tc * cell + cell / 2, ty = (angel.tr + 1) * cell - cell * .1;
+    let bright = 1, glow = 6, sx = 1, sy = 1, op = 1, pool = 0, groundY = angel.y;
     if(angel.state === "descend"){
-      const k = Math.min(1, (now - angel.t0) / 1800), e = 1 - Math.pow(1 - k, 3);
-      angel.y = angel.y0 + (ty - angel.y0) * e; angel.x = tx;
+      /* o céu abre primeiro; o anjo desce como luz pura e vai ganhando cor */
+      const k = clamp01((now - angel.t0 - ANGEL_OPEN) / ANGEL_FALL), e = 1 - Math.pow(1 - k, 3);
+      angel.y = angel.y0 + (ty - angel.y0) * e; angel.x = tx; groundY = ty;
+      angel.lightK = e;
+      bright = 1 + (1 - e) * 1.5; glow = 6 + (1 - e) * 14; sx = sy = 1.15 - .15 * e;
+      pool = clamp01((now - angel.t0) / ANGEL_OPEN) * (.35 + .65 * e);
+      if(k > .15 && now - angel.fxT > 110){ angel.fxT = now; angelFeather(angel.x, angel.y - cell * .9); }
       if(k >= 1){
-        angel.state = "wait"; angel.wait = now + 2000;
+        angel.state = "wait"; angel.wait = now + 2000; angel.landT = now;
         angelFadeBeam();
+        angelRing(tx, ty); angelBurst(tx, ty - cell * .3, 16, true);
         if(angel.dismissAfterArrival) angelDismiss();
       }
     } else if(angel.state === "ascend"){
-      const k = Math.max(0, Math.min(1, (now - angel.t0 - 400) / 1800));
-      angel.y = ty + (angel.y0 - ty) * k * k * k;
-      angel.moving = false; angel.dir = "front";
+      const t = now - angel.t0;
+      const charge = clamp01(t / ANGEL_CHARGE);
+      const k = clamp01((t - ANGEL_CHARGE - ANGEL_CROUCH) / ANGEL_RISE), kk = k * k * k;
+      groundY = ty; angel.moving = false; angel.dir = "front";
+      if(!angel.beam && t >= 0) angelBeam(true);
+      if(t < ANGEL_CHARGE){
+        /* carrega: brilho cresce e faíscas sobem devagar */
+        angel.y = ty; bright = 1 + charge * .8; glow = 6 + charge * 10; pool = charge;
+        if(now - angel.fxT > 90){ angel.fxT = now; angelBurst(angel.x, ty - cell * .2, 1, true); }
+      } else if(t < ANGEL_CHARGE + ANGEL_CROUCH){
+        /* agacha antes do impulso */
+        const c = (t - ANGEL_CHARGE) / ANGEL_CROUCH;
+        angel.y = ty + Math.sin(c * Math.PI) * 4; sx = 1 + Math.sin(c * Math.PI) * .06; sy = 1 - Math.sin(c * Math.PI) * .08;
+        bright = 1.8; glow = 16; pool = 1;
+      } else {
+        /* sobe esticado, solta penas e se dissolve no feixe */
+        angel.y = ty + (angel.y0 - ty) * kk;
+        const st = Math.sin(clamp01(k * 3) * Math.PI / 2) * (1 - k);
+        sx = 1 - .08 * st; sy = 1 + .12 * st;
+        bright = 1.8 + k * .8; glow = 16 + k * 10; pool = 1 - k;
+        op = k > .6 ? 1 - (k - .6) / .4 : 1;
+        if(now - angel.fxT > 120){ angel.fxT = now; angelFeather(angel.x, angel.y - cell * .9); }
+      }
+      angel.lightK = 1 - kk * .4 - k * .6;
       if(k >= 1){ angelFadeBeam(); angelRemove(); return; }
     } else {
       const p = eng.player, pk = p.r + "," + p.c;
@@ -5094,7 +5178,7 @@ function createDungeonRoom(opts){
         const dx = gx - angel.x, dy = gy - angel.y, dist = Math.hypot(dx, dy), step = ANGEL_SPEED * cell * dt;
         if(dist <= step){
           angel.x = gx; angel.y = gy; angel.moving = false;
-          if(angel.state === "return"){ angel.state = "ascend"; angel.t0 = now; }
+          if(angel.state === "return"){ angel.state = "ascend"; angel.t0 = now; angel.fxT = 0; }
           else { angel.state = "wait"; angel.wait = now + 2000; }
         }
         else {
@@ -5102,21 +5186,43 @@ function createDungeonRoom(opts){
           angel.dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "front" : "back");
         }
       } else angel.moving = false;
+      groundY = angel.y;
+      /* pouso: luz passa do ponto e volta, sprite dá um lampejo */
+      const lt = angel.landT ? (now - angel.landT) / 500 : 1;
+      if(lt < 1){ angel.lightK = 1 + .25 * Math.sin(lt * Math.PI) * (1 - lt); bright = 1 + 1.2 * (1 - lt); glow = 6 + 12 * (1 - lt); pool = 1 - lt; }
+      else angel.lightK = Math.min(1, angel.lightK + dt * 2.5);
+      if(angel.fadeInT){ const f = clamp01((now - angel.fadeInT) / 400); op = f; angel.lightK = Math.min(angel.lightK, f); if(f >= 1) angel.fadeInT = 0; }
+      /* faíscas caindo das asas enquanto está presente */
+      if(now - angel.fxT > 340){ angel.fxT = now; angelFx("dg-spark", angel.x + (Math.random() - .5) * cell * .9, angel.y - cell * (.7 + Math.random() * .5), "--dx:" + ((Math.random() - .5) * cell * .3).toFixed(1) + "px;--dy:" + (cell * .7).toFixed(1) + "px;--t:1.3s"); }
     }
     const w = cell * 1.3, h = cell * 1.6;
     angel.el.style.width = w + "px"; angel.el.style.height = h + "px";
     angel.el.style.transform = "translate(" + (angel.x - w/2) + "px," + (angel.y - h) + "px)";
+    if(op !== angel.opacity){ angel.opacity = op; angel.el.style.opacity = op; }
     angel.img.style.width = w + "px"; angel.img.style.height = h + "px";
+    angel.img.style.filter = "drop-shadow(0 0 " + glow.toFixed(1) + "px rgba(255,248,215,.9)) brightness(" + bright.toFixed(2) + ")";
+    angel.img.style.scale = sx.toFixed(3) + " " + sy.toFixed(3);
+    /* sombra no chão: menor e mais clara quanto mais alto */
+    const alt = Math.max(0, groundY - angel.y), sk = clamp01(1 - alt / (cell * 6));
+    const sw = w * .7, sh = h * .18;
+    angel.shadow.style.width = sw + "px"; angel.shadow.style.height = sh + "px";
+    angel.shadow.style.transform = "translate(" + (angel.x - sw/2) + "px," + (groundY - sh*.35) + "px) scale(" + (.25 + .75 * sk).toFixed(3) + ")";
+    angel.shadow.style.opacity = (sk * op).toFixed(3);
+    /* círculo de luz no chão */
+    const pw = cell * 2.6, ph = pw * .42;
+    angel.pool.style.width = pw + "px"; angel.pool.style.height = ph + "px";
+    angel.pool.style.transform = "translate(" + (angel.x - pw/2) + "px," + (groundY - ph/2) + "px) scale(" + (.3 + .7 * pool).toFixed(3) + ")";
+    angel.pool.style.opacity = pool.toFixed(3);
     const f = angel.moving && (angel.dir === "front" || angel.dir === "back") ? angel.dir + (Math.floor(now / 220) % 2 ? "2" : "1") : angel.dir + "_pose";
     const src = ANGEL_SPR[f].src;
     if(angel.img.dataset.f !== f){ angel.img.dataset.f = f; angel.img.style.backgroundImage = 'url("' + src + '")'; }
     syncLight(true);
   }
-  /* luz do anjo: recorta a escuridão num raio de 3 ladrilhos ao redor dele */
+  /* luz do anjo: recorta a escuridão ao redor dele; o raio acende/apaga junto com a chegada e a partida */
   function angelMask(){
     if(!lighting) return;
     if(!angel.on){ lighting.style.webkitMaskImage = lighting.style.maskImage = ""; return; }
-    const r = Math.round(eng.cell * ANGEL_LIGHT), x = angel.x, y = angel.y - eng.cell * .6;
+    const r = Math.max(1, Math.round(eng.cell * ANGEL_LIGHT * angel.lightK)), x = angel.x, y = angel.y - eng.cell * .6;
     const m = "radial-gradient(circle " + r + "px at " + x + "px " + y + "px,rgba(0,0,0,0) 0,rgba(0,0,0,.25) 45%,rgba(0,0,0,.7) 78%,#000 100%)";
     lighting.style.webkitMaskImage = lighting.style.maskImage = m;
   }
