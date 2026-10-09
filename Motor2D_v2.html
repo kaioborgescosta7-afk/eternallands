@@ -239,6 +239,35 @@ window.ANJO_LIBERADO = true;  /* laboratório: sem compra */
   }
   function imgUrl(nome){ return base() + "angel_" + nome + ".png"; }
 
+  /* MEDIDAS DE CADA IMAGEM: [largura, altura do arquivo, x0, y0, x1, y1 da
+     caixa onde o anjo realmente está (pixels não transparentes)].
+     Os arquivos têm tamanhos e margens bem diferentes (a pose de frente é
+     1024×1024, as laterais 305×607...). Com estas medidas toda pose é
+     desenhada com a MESMA altura de anjo, pés no chão e centrada.
+     Trocou ou adicionou uma imagem? Meça de novo e atualize aqui
+     (ex.: Python/PIL → img.getchannel("A").getbbox()). */
+  var MEDIDAS = {
+    front_pose: [1024, 1024, 225, 24, 795, 996],
+    right_pose: [305, 607, 18, 45, 234, 591],
+    back_pose:  [343, 566, 13, 38, 336, 557],
+    left_pose:  [305, 607, 71, 45, 287, 591],
+    front1:     [316, 490, 12, 8, 300, 486],
+    front2:     [1408, 2400, 60, 72, 1347, 2223],
+    back1:      [608, 612, 16, 36, 600, 593],
+    back2:      [608, 612, 8, 36, 592, 593]
+  };
+  /* background-size/position para caber numa caixa caixaL×caixaA com o anjo
+     medindo `altura` px, centrado e apoiado no fundo da caixa */
+  function encaixe(nome, caixaL, caixaA, altura){
+    var m = MEDIDAS[nome];
+    if (!m) return { size: "contain", pos: "center bottom" };
+    var k = altura / (m[5] - m[3]);
+    return {
+      size: (m[0] * k).toFixed(1) + "px " + (m[1] * k).toFixed(1) + "px",
+      pos: (caixaL / 2 - (m[2] + m[4]) / 2 * k).toFixed(1) + "px " + (caixaA - m[5] * k).toFixed(1) + "px"
+    };
+  }
+
   function ler(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
   function gravar(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
   function apagar(k){ try { localStorage.removeItem(k); } catch(e){} }
@@ -297,8 +326,8 @@ window.ANJO_LIBERADO = true;  /* laboratório: sem compra */
     ".anjo-pedestal{position:absolute;left:50%;bottom:2px;width:120px;height:26px;margin-left:-60px;border-radius:50%;z-index:-1;background:radial-gradient(ellipse,rgba(255,250,225,.9),rgba(255,214,120,.35) 45%,transparent 72%);filter:blur(1px);animation:anjoHalo 2.6s ease-in-out infinite alternate-reverse}" +
     ".anjo-figura{position:relative;width:118px;height:160px;margin-bottom:10px;animation:anjoFlutua 2.4s ease-in-out infinite alternate}" +
     "@keyframes anjoFlutua{from{transform:translateY(0)}to{transform:translateY(-8px)}}" +
-    ".anjo-figura img{width:100%;height:100%;object-fit:contain;object-position:center bottom;display:block;transition:transform .2s ease-in-out,filter .2s ease-in-out;filter:drop-shadow(0 0 6px rgba(255,250,230,.95)) drop-shadow(0 0 16px rgba(255,226,150,.75))}" +
-    ".anjo-figura img.virando{transform:scaleX(.06);filter:drop-shadow(0 0 10px #fff) drop-shadow(0 0 24px rgba(255,236,170,1)) brightness(1.6)}" +
+    ".anjo-pose{position:absolute;inset:0;display:none;background-repeat:no-repeat;filter:drop-shadow(0 0 6px rgba(255,250,230,.95)) drop-shadow(0 0 16px rgba(255,226,150,.75))}" +
+    ".anjo-pose.on{display:block}" +
     ".anjo-brilho{position:absolute;bottom:20px;width:4px;height:4px;border-radius:50%;background:#fffbe6;box-shadow:0 0 6px 2px rgba(255,236,170,.9);opacity:0;animation:anjoBrilho 3.2s ease-out infinite}" +
     "@keyframes anjoBrilho{0%{transform:translateY(0) scale(.6);opacity:0}15%{opacity:1}100%{transform:translateY(-150px) scale(.2);opacity:0}}" +
     "@media (prefers-reduced-motion:reduce){.dg-angel i,.dg-angel-beam::after,.anjo-raios,.anjo-figura,.anjo-brilho,.loja-card--celestial::before,.loja-card--celestial .loja-card-btn{animation:none}.dg-spark,.dg-feather,.dg-angel-ring{display:none}}";
@@ -398,22 +427,25 @@ window.ANJO_LIBERADO = true;  /* laboratório: sem compra */
     GIRO.forEach(function(d){ var im = new Image(); im.src = imgUrl(d + "_pose"); preload.push(im); });
   }
 
-  /* gira o anjo: estreita até virar uma linha de luz, troca a pose, abre de novo */
+  /* vitrine: as 4 poses ficam empilhadas, já no mesmo tamanho; o giro só
+     troca qual delas aparece, sem efeito de transição */
+  var VITRINE_L = 118, VITRINE_A = 160, VITRINE_ANJO = 150, GIRO_MS = 1100;
+  function montarPoses(fig){
+    fig.innerHTML = GIRO.map(function(d, i){
+      var e = encaixe(d + "_pose", VITRINE_L, VITRINE_A, VITRINE_ANJO);
+      return '<div class="anjo-pose' + (i === 0 ? " on" : "") + '" role="img" aria-label="Anjo da Guarda" style="background-image:url(&quot;' +
+        imgUrl(d + "_pose") + '&quot;);background-size:' + e.size + ";background-position:" + e.pos + '"></div>';
+    }).join("");
+  }
   function girarVitrine(fig){
-    var img = fig.querySelector("img"), i = 0;
-    if (calmo) return;
-    function passo(){
-      if (!fig.isConnected) return;
-      img.classList.add("virando");
-      setTimeout(function(){
-        if (!fig.isConnected) return;
-        i = (i + 1) % GIRO.length;
-        img.src = imgUrl(GIRO[i] + "_pose");
-        img.classList.remove("virando");
-        setTimeout(passo, 1100);
-      }, 200);
-    }
-    setTimeout(passo, 1100);
+    var poses = fig.querySelectorAll(".anjo-pose"), i = 0;
+    if (calmo || !poses.length) return;
+    var t = setInterval(function(){
+      if (!fig.isConnected) { clearInterval(t); return; }
+      poses[i].classList.remove("on");
+      i = (i + 1) % poses.length;
+      poses[i].classList.add("on");
+    }, GIRO_MS);
   }
 
   function marcarAdquirido(){
@@ -443,7 +475,7 @@ window.ANJO_LIBERADO = true;  /* laboratório: sem compra */
       brilhos += '<b class="anjo-brilho" style="left:' + (18 + k * 11) + '%;animation-delay:' + (k * .47).toFixed(2) + 's"></b>';
     }
     vitrine.innerHTML = '<div class="anjo-raios"></div><div class="anjo-halo"></div><div class="anjo-pedestal"></div>' +
-      '<div class="anjo-figura"><img alt="Anjo da Guarda" src="' + imgUrl("front_pose") + '"></div>' + brilhos;
+      '<div class="anjo-figura"></div>' + brilhos;
     if (bau) bau.parentNode.replaceChild(vitrine, bau); else cartao.insertBefore(vitrine, cartao.firstChild);
     var gemas = cartao.querySelector(".loja-card-gems");
     if (gemas) gemas.remove();
@@ -463,6 +495,7 @@ window.ANJO_LIBERADO = true;  /* laboratório: sem compra */
     });
     cartao.appendChild(info);
 
+    montarPoses(vitrine.querySelector(".anjo-figura"));
     girarVitrine(vitrine.querySelector(".anjo-figura"));
     marcarAdquirido();
   }
@@ -694,7 +727,8 @@ window.ANJO_LIBERADO = true;  /* laboratório: sem compra */
       angel.el.style.width = w + "px"; angel.el.style.height = h + "px";
       angel.el.style.transform = "translate(" + (angel.x - w / 2) + "px," + (angel.y - h) + "px)";
       if (op !== angel.opacity) { angel.opacity = op; angel.el.style.opacity = op; }
-      angel.img.style.width = w + "px"; angel.img.style.height = h + "px";
+      var iw = cell * 2;   /* mais larga que o anjo: a pose de costas abre as asas */
+      angel.img.style.width = iw + "px"; angel.img.style.height = h + "px";
       angel.img.style.filter = "drop-shadow(0 0 " + glow.toFixed(1) + "px rgba(255,248,215,.9)) brightness(" + bright.toFixed(2) + ")";
       angel.img.style.scale = sx.toFixed(3) + " " + sy.toFixed(3);
       /* sombra no chão: menor e mais clara quanto mais alto */
@@ -709,7 +743,14 @@ window.ANJO_LIBERADO = true;  /* laboratório: sem compra */
       angel.pool.style.transform = "translate(" + (angel.x - pw / 2) + "px," + (groundY - ph / 2) + "px) scale(" + (.3 + .7 * pool).toFixed(3) + ")";
       angel.pool.style.opacity = pool.toFixed(3);
       var fr = angel.moving && (angel.dir === "front" || angel.dir === "back") ? angel.dir + (Math.floor(now / 220) % 2 ? "2" : "1") : angel.dir + "_pose";
-      if (angel.img.dataset.f !== fr) { angel.img.dataset.f = fr; angel.img.style.backgroundImage = 'url("' + SPR[fr].src + '")'; }
+      var chave = fr + "@" + cell;
+      if (angel.img.dataset.f !== chave) {
+        /* todas as imagens com a mesma altura de anjo (ver MEDIDAS) */
+        var e = encaixe(fr, iw, h, cell * 1.45);
+        angel.img.dataset.f = chave;
+        angel.img.style.backgroundImage = 'url("' + SPR[fr].src + '")';
+        angel.img.style.backgroundSize = e.size; angel.img.style.backgroundPosition = e.pos;
+      }
     }
 
     /* luz do anjo: recorta a escuridão ao redor dele; o raio acende/apaga junto com a chegada e a partida */
