@@ -384,6 +384,9 @@
        Loja.registrarProduto(...). Grande (com jogo próprio, como o anjo):
        script próprio que chama Loja.registrarProduto.
      · Troque Loja.NOVIDADE (seção 2) pelo SKU novo para acender a bolinha.
+     · Compra única ou repetida? Hoje SÓ os pacotes de fragmentos
+       (pack_10_gems, pack_100_gems, pack_1000_gems) podem ser comprados
+       várias vezes; Pack Inicial e Anjo são de compra única (compraUnica).
      · Kodular: o botão manda o SKU por AppInventor.setWebViewString(sku); o
        bloco do Kodular confirma o pagamento e chama a função de entrega
        (ex.: adicionarpackangelnojogo();). Consumível → Consume; permanente
@@ -913,6 +916,12 @@
     }
   }
   ensureProduto();
+  /* compra única pela regra da loja (seção 2): quem já resgatou vê
+     "✓ Já adquirido" e a loja recusa o SKU. Só os pacotes de fragmentos
+     podem ser comprados quantas vezes o jogador quiser. */
+  if (window.Loja && window.LOJA_PRODUTOS) {
+    window.Loja.registrarProduto({ sku: "pack_starter" }, { compraUnica: packJaResgatado });
+  }
 
   function ensureFounderCss(){
     if (document.getElementById("loja-founder-css")) return;
@@ -960,7 +969,7 @@
       var btn = document.getElementById("loja-btn-pack_starter");
       if (!btn || btn.dataset.packAdquirido === "1") return;
       btn.dataset.packAdquirido = "1";
-      btn.textContent = "✓ Adquirido";
+      btn.textContent = "✓ Já adquirido";
       btn.disabled = true;
       btn.removeAttribute("onclick");
       btn.onclick = null;
