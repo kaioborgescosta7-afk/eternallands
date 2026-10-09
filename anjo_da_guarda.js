@@ -7,8 +7,11 @@
      3. Cartão no Mural de Compras: vitrine girando com as 4 poses + glow
      4. O anjo na masmorra: invocação, pouso, luz, partida
 
-   Ponto de entrada do Kodular, depois que o Google Play confirmar a compra:
-       adicionarAnjoDaGuardaNoJogo();
+   Produto no Google Play: "pack_angel" (o mesmo texto que a loja manda ao
+   Kodular pelo WebViewString). Ponto de entrada do Kodular, depois que o
+   Google Play confirmar a compra:
+       adicionarpackangelnojogo();
+   (adicionarAnjoDaGuardaNoJogo() é o mesmo, com nome antigo.)
    É um item PERMANENTE: no Kodular, NÃO chame Consume para este SKU.
 
    Ligação numa masmorra (dentro de createDungeonRoom):
@@ -28,7 +31,7 @@
   "use strict";
   if (window.AnjoDaGuarda && window.AnjoDaGuarda.__pronto) return;
 
-  var SKU = "anjo_da_guarda";
+  var SKU = "pack_angel";
   var PRECO = "R$ 9,90";
   var KEY_DONO = "arhen_anjo_guarda_adquirido";
   var KEY_PEND = "arhen_anjo_guarda_pendente";
@@ -168,6 +171,7 @@
       gravar(KEY_DONO, "1");
     }
   };
+  window.adicionarpackangelnojogo = window.adicionarAnjoDaGuardaNoJogo;
   /* compra que chegou antes deste script (anotada pelo esboço do compra-bootstrap) */
   if (ler(KEY_PEND) === "1") window.adicionarAnjoDaGuardaNoJogo();
   setInterval(sincronizarPosse, 2000);
