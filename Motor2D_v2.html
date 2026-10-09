@@ -2709,6 +2709,21 @@ const SIMON_LEVELS = [
     "# c # d #",
     "#@     L#",
     "####4#G##"
+  ]},
+
+  /* Difícil III — mesmo ritmo dos difíceis, mapa próprio (criado para a D12
+     do jogo). Botões nos quatro cantos e uma grade de pilares no miolo: o
+     mais longo de percorrer dos cinco. */
+  { name:"Difícil III", len:9, pace:600, accel:26, minPace:360, rows:[
+    "####1####",
+    "#a     b#",
+    "#  # #  #",
+    "2 #   # 3",
+    "#   #   #",
+    "# #   # #",
+    "#  # #  #",
+    "#c@  L d#",
+    "####4#G##"
   ]}
 ];
 
@@ -7803,7 +7818,8 @@ h1{font-family:var(--font-display);font-size:clamp(15px,4.4vw,20px);margin:0;
        sokoban:  tier (0 = Tier 1 … 4 = Tier 5) → { fase: "dungeon" }
        sinais:   nível da Sala dos Sinais        → "dungeon"
        cristais: fase da Sala de Cristal         → "dungeon"
-     Atualizado em 09/10/2026 (D4, D11 e D13 em 2D; Difícil II na D2).
+     Atualizado em 09/10/2026 (D4, D11, D12 e D13 em 2D; Difícil II na D2;
+     Difícil III na D12).
      ═══════════════════════════════════════════════════════════════════════ */
   /* As listas LEVELS_T1..T5 deste motor são CÓPIA das do jogo (09/10/2026), para
      que o índice daqui seja o mesmo índice do jogo. Fase nova: crie aqui, e ao
@@ -7814,10 +7830,10 @@ h1{font-family:var(--font-display);font-size:clamp(15px,4.4vw,20px);margin:0;
       1: { 3:"D16", 7:"D16" },
       2: { 0:"D5", 6:"D5", 7:"D5" },
       3: { 0:"D2", 1:"D2", 2:"D2", 3:"D7", 4:"D7", 5:"D7", 6:"D3", 7:"D3", 8:"D3" },
-      4: { 4:"D13", 5:"D13", 6:"D13", 8:"D4", 9:"D4", 10:"D4" }
+      4: { 4:"D13", 5:"D13", 6:"D13", 7:"D12", 8:"D4", 9:"D4", 10:"D4" }
     },
-    sinais:   { 0:"D14", 1:"D10", 2:"D10", 3:"D2" },
-    cristais: { 0:"D11", 1:"D11" }
+    sinais:   { 0:"D14", 1:"D10", 2:"D10", 3:"D2", 4:"D12" },
+    cristais: { 0:"D11", 1:"D11", 2:"D12" }
   };
   const usoDe = (tipo, i, tier) => tipo === "sokoban"
     ? ((JOGO_USO.sokoban[tier] || {})[i] || null) : (JOGO_USO[tipo][i] || null);
