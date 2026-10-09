@@ -74,7 +74,9 @@
     ".nota li{font-size:11.5px;line-height:1.5;color:#e8d4ae;margin-bottom:4px}" +
     ".nota--antiga .nota-titulo{color:#d9b880}" +
     ".nota--antiga li{color:#bfa880}" +
-    ".frag-buy-btn .loja-nova-dot{position:absolute;top:4px;right:12px;z-index:3}";
+    /* bolinha maciça: fica FORA do botão (ele corta o que passa da borda) e sobra no canto */
+    ".loja-nova-dot{position:absolute;z-index:5;width:13px;height:13px;border-radius:50%;pointer-events:none;background:#e31b1b;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.65);animation:lojaDotPulse 1.25s ease-in-out infinite}" +
+    "@keyframes lojaDotPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}";
   function garantirCss(){
     if (document.getElementById("notas-css")) return;
     var s = document.createElement("style"); s.id = "notas-css"; s.textContent = CSS;
@@ -137,14 +139,25 @@
   function lojaNova(){ return !!NOVIDADE_LOJA && ler(KEY_LOJA) !== NOVIDADE_LOJA; }
   function pintarLoja(){
     var nova = lojaNova();
+    Array.prototype.forEach.call(document.querySelectorAll(".loja-nova-dot"), function(dot){
+      if (!nova || !dot._btn || !dot._btn.isConnected) dot.remove();
+    });
+    if (!nova) return;
     Array.prototype.forEach.call(document.querySelectorAll(".frag-buy-btn"), function(btn){
-      var dot = btn.querySelector(".loja-nova-dot");
-      if (nova && !dot) {
-        dot = document.createElement("span"); dot.className = "notif-dot loja-nova-dot visible";
-        btn.appendChild(dot);
-      } else if (!nova && dot) dot.remove();
+      var pai = btn.parentNode;
+      if (!pai || btn.offsetParent === null) return;
+      var dot = btn._lojaDot;
+      if (!dot || !dot.isConnected) {
+        if (getComputedStyle(pai).position === "static") pai.style.position = "relative";
+        dot = document.createElement("span"); dot.className = "loja-nova-dot"; dot._btn = btn;
+        pai.appendChild(dot); btn._lojaDot = dot;
+      }
+      /* canto superior direito do botão, sobrando um pouco para fora */
+      dot.style.left = (btn.offsetLeft + btn.offsetWidth - 11) + "px";
+      dot.style.top = (btn.offsetTop - 4) + "px";
     });
   }
+  window.addEventListener("resize", function(){ pintarLoja(); });
   function lojaVista(){
     if (!lojaNova()) return;
     gravar(KEY_LOJA, NOVIDADE_LOJA);
