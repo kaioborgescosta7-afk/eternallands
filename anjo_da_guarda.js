@@ -26,7 +26,9 @@
 
    Opções globais (definir ANTES deste script, se quiser):
        window.ANJO_IMG_BASE = "";     pasta das imagens angel_*.png
-       window.ANJO_LIBERADO = true;   libera sem compra (laboratório)
+       window.ANJO_LIBERADO = true;   botão ✧ sempre disponível, sem compra
+                                      (laboratório); a posse da compra continua
+                                      sendo contada à parte, para testar a loja
    ════════════════════════════════════════════════════════════════════════ */
 (function(){
   "use strict";
@@ -154,9 +156,12 @@
      Item permanente. Fica gravado em dois lugares: no aparelho (localStorage)
      e no save (G.anjoDaGuarda), para atravessar reinstalação via nuvem. */
   function jogoPronto(){ return !!(window.G && G.hero && typeof G.hero.level === "number"); }
+  /* comprou de verdade (é isto que a loja usa para "✓ Adquirido") */
   function possui(){
-    return !!window.ANJO_LIBERADO || ler(KEY_DONO) === "1" || !!(window.G && G.anjoDaGuarda);
+    return ler(KEY_DONO) === "1" || !!(window.G && G.anjoDaGuarda);
   }
+  /* pode invocar: comprou, ou está liberado (laboratório) */
+  function podeInvocar(){ return !!window.ANJO_LIBERADO || possui(); }
   /* aparelho ⇄ save: quem tiver a posse passa para o outro */
   function sincronizarPosse(){
     if (!window.G) return;
@@ -423,7 +428,7 @@
       if (btn) btn.classList.remove("on");
     }
     function toggle(){
-      if (!possui()) return;
+      if (!podeInvocar()) return;
       angel.on ? dismiss() : summon();
     }
 
@@ -440,7 +445,7 @@
     function tick(now){
       /* o botão só existe para quem comprou */
       if (btn && ctx.mount) {
-        var dono = possui();
+        var dono = podeInvocar();
         if (dono && btn.parentNode !== ctx.mount) ctx.mount.appendChild(btn);
         else if (!dono && btn.parentNode) btn.remove();
       }
