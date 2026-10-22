@@ -1,9 +1,0 @@
-{
-  "name": "arhen-i18n-tools",
-  "private": true,
-  "description": "Ferramentas de tradução do Crônicas de Arhen (um jogo só, idioma trocado pelo botão Language).",
-  "dependencies": {
-    "acorn": "8.19.0",
-    "acorn-walk": "8.3.5"
-  }
-}
